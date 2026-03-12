@@ -1,14 +1,16 @@
-from ui.students.students_page import StudentsPage
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout,
     QVBoxLayout, QPushButton, QLabel, QStackedWidget
 )
 
+from ui.students.students_page import StudentsPage
+
 
 class MainWindow(QMainWindow):
-
-    def __init__(self):
+    def __init__(self, current_user):
         super().__init__()
+
+        self.current_user = current_user
 
         self.setWindowTitle("Système de Gestion Scolaire")
         self.resize(1000, 600)
@@ -18,8 +20,11 @@ class MainWindow(QMainWindow):
 
         main_layout = QHBoxLayout()
 
-        # MENU LATERAL
         menu_layout = QVBoxLayout()
+
+        self.user_label = QLabel(
+            f"Connecté : {self.current_user['username']} ({self.current_user['role']})"
+        )
 
         self.students_btn = QPushButton("Élèves")
         self.teachers_btn = QPushButton("Enseignants")
@@ -28,6 +33,7 @@ class MainWindow(QMainWindow):
         self.grades_btn = QPushButton("Notes")
         self.reports_btn = QPushButton("Bulletins")
 
+        menu_layout.addWidget(self.user_label)
         menu_layout.addWidget(self.students_btn)
         menu_layout.addWidget(self.teachers_btn)
         menu_layout.addWidget(self.classes_btn)
@@ -36,11 +42,10 @@ class MainWindow(QMainWindow):
         menu_layout.addWidget(self.reports_btn)
         menu_layout.addStretch()
 
-        # ZONE CONTENU
         self.stack = QStackedWidget()
 
         self.page_home = QLabel("Tableau de bord")
-        self.page_students = StudentsPage()
+        self.page_students = StudentsPage(current_user=self.current_user)
         self.page_teachers = QLabel("Gestion des enseignants")
 
         self.stack.addWidget(self.page_home)
@@ -52,7 +57,6 @@ class MainWindow(QMainWindow):
 
         main_widget.setLayout(main_layout)
 
-        # connexions
         self.students_btn.clicked.connect(self.show_students)
         self.teachers_btn.clicked.connect(self.show_teachers)
 

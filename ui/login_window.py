@@ -3,11 +3,12 @@ from PyQt6.QtWidgets import (
     QVBoxLayout, QMessageBox
 )
 
-from ui.main_window import MainWindow
 from database.connection import get_connection
+from ui.main_window import MainWindow
+from utils.security import verify_password
+
 
 class LoginWindow(QWidget):
-
     def __init__(self):
         super().__init__()
 
@@ -34,34 +35,55 @@ class LoginWindow(QWidget):
         self.setLayout(layout)
 
     def login(self):
-
-        username = self.username_input.text()
+        username = self.username_input.text().strip()
         password = self.password_input.text()
 
-        conn = get_connection()
+        if not username or not password:
+            QMessageBox.warning(self, "Validation", "Veuillez remplir tous les champs.")
+            return
 
+        conn = get_connection()
         if not conn:
             QMessageBox.critical(self, "Erreur", "Connexion base impossible")
             return
 
-        cursor = conn.cursor()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, username, password_hash, role, establishment_id
+                FROM users
+                WHERE username = %s
+                """,
+                (username,)
+            )
 
-        query = """
-        SELECT id, role
-        FROM users
-        WHERE username=%s AND password_hash=%s
-        """
+            user = cursor.fetchone()
 
-        cursor.execute(query, (username, password))
+            if not user:
+                QMessageBox.warning(self, "Erreur", "Identifiants incorrects")
+                return
 
-        user = cursor.fetchone()
+            user_id, db_username, password_hash, role, establishment_id = user
 
-        conn.close()
+            if not verify_password(password, password_hash):
+                QMessageBox.warning(self, "Erreur", "Identifiants incorrects")
+                return
 
-        if user:
-            self.main_window = MainWindow()
+            self.current_user = {
+                "id": user_id,
+                "username": db_username,
+                "role": role,
+                "establishment_id": establishment_id
+            }
+
+            QMessageBox.information(self, "Succès", "Connexion réussie")
+
+            self.main_window = MainWindow(self.current_user)
             self.main_window.show()
-
             self.close()
-        else:
-            QMessageBox.warning(self, "Erreur", "Identifiants incorrects")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Erreur", f"Erreur lors de la connexion : {e}")
+        finally:
+            conn.close()
