@@ -1,0 +1,5 @@
+DB_HOST = "localhost"
+DB_NAME = "school_management"
+DB_USER = "beni"
+DB_PASSWORD = "orbitb4"
+DB_PORT = "5432"
