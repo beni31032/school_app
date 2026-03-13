@@ -4,6 +4,11 @@ from PyQt6.QtWidgets import (
 )
 
 from ui.students.students_page import StudentsPage
+from ui.teachers.teachers_page import TeachersPage
+from ui.subjects.subjects_page import SubjectsPage
+from ui.class_subjects.class_subjects_page import ClassSubjectsPage
+from ui.teacher_assignments.teacher_assignments_page import TeacherAssignmentsPage
+from ui.classes.classes_page import ClassesPage
 
 
 class MainWindow(QMainWindow):
@@ -29,6 +34,9 @@ class MainWindow(QMainWindow):
         self.students_btn = QPushButton("Élèves")
         self.teachers_btn = QPushButton("Enseignants")
         self.classes_btn = QPushButton("Classes")
+        self.subjects_btn = QPushButton("Matières")
+        self.class_subjects_btn = QPushButton("Matières par classe")
+        self.teacher_assignments_btn = QPushButton("Affectations enseignants")
         self.payments_btn = QPushButton("Paiements")
         self.grades_btn = QPushButton("Notes")
         self.reports_btn = QPushButton("Bulletins")
@@ -37,6 +45,9 @@ class MainWindow(QMainWindow):
         menu_layout.addWidget(self.students_btn)
         menu_layout.addWidget(self.teachers_btn)
         menu_layout.addWidget(self.classes_btn)
+        menu_layout.addWidget(self.subjects_btn)
+        menu_layout.addWidget(self.class_subjects_btn)
+        menu_layout.addWidget(self.teacher_assignments_btn)
         menu_layout.addWidget(self.payments_btn)
         menu_layout.addWidget(self.grades_btn)
         menu_layout.addWidget(self.reports_btn)
@@ -46,11 +57,19 @@ class MainWindow(QMainWindow):
 
         self.page_home = QLabel("Tableau de bord")
         self.page_students = StudentsPage(current_user=self.current_user)
-        self.page_teachers = QLabel("Gestion des enseignants")
+        self.page_teachers = TeachersPage(current_user=self.current_user)
+        self.page_subjects = SubjectsPage(current_user=self.current_user)
+        self.page_class_subjects = ClassSubjectsPage(current_user=self.current_user)
+        self.page_teacher_assignments = TeacherAssignmentsPage(current_user=self.current_user)
+        self.page_classes = ClassesPage(current_user=self.current_user)
 
         self.stack.addWidget(self.page_home)
         self.stack.addWidget(self.page_students)
+        self.stack.addWidget(self.page_classes)
         self.stack.addWidget(self.page_teachers)
+        self.stack.addWidget(self.page_subjects)
+        self.stack.addWidget(self.page_class_subjects)
+        self.stack.addWidget(self.page_teacher_assignments)
 
         main_layout.addLayout(menu_layout)
         main_layout.addWidget(self.stack)
@@ -59,9 +78,25 @@ class MainWindow(QMainWindow):
 
         self.students_btn.clicked.connect(self.show_students)
         self.teachers_btn.clicked.connect(self.show_teachers)
+        self.subjects_btn.clicked.connect(self.show_subjects)
+        self.class_subjects_btn.clicked.connect(self.show_class_subjects)
+        self.teacher_assignments_btn.clicked.connect(self.show_teacher_assignments)
+        self.classes_btn.clicked.connect(self.show_classes)
 
     def show_students(self):
         self.stack.setCurrentWidget(self.page_students)
 
     def show_teachers(self):
         self.stack.setCurrentWidget(self.page_teachers)
+        
+    def show_subjects(self):
+        self.stack.setCurrentWidget(self.page_subjects)
+        
+    def show_class_subjects(self):
+        self.stack.setCurrentWidget(self.page_class_subjects)
+        
+    def show_teacher_assignments(self):
+        self.stack.setCurrentWidget(self.page_teacher_assignments)
+        
+    def show_classes(self):
+        self.stack.setCurrentWidget(self.page_classes)

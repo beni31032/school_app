@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import (
 
 from database.connection import get_connection
 from ui.students.add_student_dialog import AddStudentDialog
+from ui.students.edit_student_dialog import EditStudentDialog
 
 
 class StudentsPage(QWidget):
@@ -46,6 +47,8 @@ class StudentsPage(QWidget):
 
         self.add_btn.clicked.connect(self.open_add_dialog)
         self.refresh_btn.clicked.connect(self.load_students)
+        self.edit_btn.clicked.connect(self.edit_student)
+        self.delete_btn.clicked.connect(self.delete_student)
 
         self.load_students()
 
@@ -69,8 +72,15 @@ class StudentsPage(QWidget):
                         s.gender,
                         c.name AS class_name
                     FROM students s
-                    LEFT JOIN enrollments e ON e.student_id = s.id
-                    LEFT JOIN classes c ON c.id = e.class_id
+                    JOIN enrollments e ON e.student_id = s.id
+                    JOIN classes c ON c.id = e.class_id
+                    WHERE e.school_year_id = (
+                        SELECT id
+                        FROM school_years
+                        ORDER BY id DESC
+                        LIMIT 1
+                    )
+                    AND s.is_active = TRUE
                     ORDER BY s.last_name, s.first_name
                     """
                 )
@@ -85,9 +95,16 @@ class StudentsPage(QWidget):
                         s.gender,
                         c.name AS class_name
                     FROM students s
-                    LEFT JOIN enrollments e ON e.student_id = s.id
-                    LEFT JOIN classes c ON c.id = e.class_id
-                    WHERE s.establishment_id = %s
+                    JOIN enrollments e ON e.student_id = s.id
+                    JOIN classes c ON c.id = e.class_id
+                    WHERE e.school_year_id = (
+                        SELECT id
+                        FROM school_years
+                        ORDER BY id DESC
+                        LIMIT 1
+                    )
+                    AND s.establishment_id = %s
+                    AND s.is_active = TRUE
                     ORDER BY s.last_name, s.first_name
                     """,
                     (self.current_user["establishment_id"],)
@@ -108,8 +125,83 @@ class StudentsPage(QWidget):
             QMessageBox.critical(self, "Erreur", f"Chargement impossible : {e}")
         finally:
             conn.close()
+            
+    def edit_student(self):
+        selected = self.table.currentRow()
+
+        if selected == -1:
+            QMessageBox.warning(self, "Erreur", "Sélectionnez un élève")
+            return
+
+        student_id_item = self.table.item(selected, 0)
+        if not student_id_item:
+            QMessageBox.warning(self, "Erreur", "Élève invalide")
+            return
+
+        student_id = student_id_item.text()
+
+        dialog = EditStudentDialog(
+            student_id=student_id,
+            current_user=self.current_user,
+            parent=self
+        )
+
+        if dialog.exec():
+            self.load_students()
+            
+            
+    def delete_student(self):
+        selected = self.table.currentRow()
+
+        if selected == -1:
+            QMessageBox.warning(self, "Erreur", "Sélectionnez un élève")
+            return
+
+        student_id_item = self.table.item(selected, 0)
+        if not student_id_item:
+            QMessageBox.warning(self, "Erreur", "Élève invalide")
+            return
+
+        student_id = student_id_item.text()
+
+        reply = QMessageBox.question(
+            self,
+            "Confirmation",
+            "Voulez-vous vraiment désactiver cet élève ?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        conn = get_connection()
+        if not conn:
+            QMessageBox.critical(self, "Erreur", "Connexion base impossible")
+            return
+
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                UPDATE students
+                SET is_active = FALSE
+                WHERE id = %s
+                """,
+                (student_id,)
+            )
+            conn.commit()
+
+            QMessageBox.information(self, "Succès", "Élève désactivé avec succès.")
+            self.load_students()
+
+        except Exception as e:
+            conn.rollback()
+            QMessageBox.critical(self, "Erreur", f"Suppression impossible : {e}")
+        finally:
+            conn.close()
+            
 
     def open_add_dialog(self):
-        dialog = AddStudentDialog(self)
+        dialog = AddStudentDialog(current_user=self.current_user, parent=self)
         if dialog.exec():
             self.load_students()

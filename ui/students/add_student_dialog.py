@@ -12,14 +12,15 @@ from database.connection import get_connection
 
 
 class AddStudentDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, current_user, parent=None):
         super().__init__(parent)
 
+        self.current_user = current_user
+
         self.setWindowTitle("Ajouter un élève")
-        self.setFixedWidth(400)
+        self.setFixedWidth(420)
 
         self.photo_source_path = None
-        self.saved_photo_path = None
 
         self.layout = QVBoxLayout()
         self.form_layout = QFormLayout()
@@ -68,19 +69,46 @@ class AddStudentDialog(QDialog):
         self.load_classes()
 
     def load_establishments(self):
+        self.establishment_input.clear()
+
         conn = get_connection()
         if not conn:
             QMessageBox.critical(self, "Erreur", "Connexion base impossible")
             return
 
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, name FROM establishments ORDER BY name")
-        rows = cursor.fetchall()
-        conn.close()
+        try:
+            cursor = conn.cursor()
 
-        self.establishment_input.clear()
-        for est_id, name in rows:
-            self.establishment_input.addItem(name, est_id)
+            if self.current_user["role"] == "ADMIN_GLOBAL":
+                cursor.execute(
+                    """
+                    SELECT id, name
+                    FROM establishments
+                    ORDER BY name
+                    """
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT id, name
+                    FROM establishments
+                    WHERE id = %s
+                    """,
+                    (self.current_user["establishment_id"],)
+                )
+
+            rows = cursor.fetchall()
+
+            for est_id, name in rows:
+                self.establishment_input.addItem(name, est_id)
+
+            if self.current_user["role"] != "ADMIN_GLOBAL":
+                self.establishment_input.setEnabled(False)
+
+        except Exception as e:
+            QMessageBox.critical(self, "Erreur", f"Chargement établissements impossible : {e}")
+        finally:
+            conn.close()
 
     def load_classes(self):
         self.class_input.clear()
@@ -94,21 +122,26 @@ class AddStudentDialog(QDialog):
             QMessageBox.critical(self, "Erreur", "Connexion base impossible")
             return
 
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            SELECT id, name
-            FROM classes
-            WHERE establishment_id = %s
-            ORDER BY name
-            """,
-            (establishment_id,)
-        )
-        rows = cursor.fetchall()
-        conn.close()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, name
+                FROM classes
+                WHERE establishment_id = %s
+                ORDER BY name
+                """,
+                (establishment_id,)
+            )
+            rows = cursor.fetchall()
 
-        for class_id, name in rows:
-            self.class_input.addItem(name, class_id)
+            for class_id, name in rows:
+                self.class_input.addItem(name, class_id)
+
+        except Exception as e:
+            QMessageBox.critical(self, "Erreur", f"Chargement classes impossible : {e}")
+        finally:
+            conn.close()
 
     def choose_photo(self):
         file_path, _ = QFileDialog.getOpenFileName(
@@ -148,9 +181,18 @@ class AddStudentDialog(QDialog):
             QMessageBox.warning(self, "Validation", "Matricule, prénom et nom sont obligatoires.")
             return
 
-        if establishment_id is None or class_id is None:
-            QMessageBox.warning(self, "Validation", "Établissement et classe sont obligatoires.")
+        if establishment_id is None:
+            QMessageBox.warning(self, "Validation", "Établissement invalide.")
             return
+
+        if class_id is None:
+            QMessageBox.warning(self, "Validation", "Veuillez sélectionner une classe.")
+            return
+
+        if self.current_user["role"] != "ADMIN_GLOBAL":
+            if establishment_id != self.current_user["establishment_id"]:
+                QMessageBox.critical(self, "Sécurité", "Action non autorisée.")
+                return
 
         photo_path = self.save_photo()
 
@@ -161,6 +203,32 @@ class AddStudentDialog(QDialog):
 
         try:
             cursor = conn.cursor()
+
+            cursor.execute(
+                """
+                SELECT establishment_id
+                FROM classes
+                WHERE id = %s
+                """,
+                (class_id,)
+            )
+            class_row = cursor.fetchone()
+
+            if not class_row:
+                conn.rollback()
+                QMessageBox.warning(self, "Validation", "Classe invalide.")
+                return
+
+            class_establishment_id = class_row[0]
+
+            if class_establishment_id != establishment_id:
+                conn.rollback()
+                QMessageBox.warning(
+                    self,
+                    "Validation",
+                    "La classe choisie n'appartient pas à l'établissement sélectionné."
+                )
+                return
 
             cursor.execute(
                 """
@@ -176,7 +244,6 @@ class AddStudentDialog(QDialog):
                     gender, establishment_id, photo_path
                 )
             )
-
             student_id = cursor.fetchone()[0]
 
             cursor.execute(
