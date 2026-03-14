@@ -9,6 +9,9 @@ from ui.subjects.subjects_page import SubjectsPage
 from ui.class_subjects.class_subjects_page import ClassSubjectsPage
 from ui.teacher_assignments.teacher_assignments_page import TeacherAssignmentsPage
 from ui.classes.classes_page import ClassesPage
+from ui.grades.grades_page import GradesPage
+from ui.fees.fees_page import FeesPage
+from ui.class_fees.class_fees_page import ClassFeesPage
 
 
 class MainWindow(QMainWindow):
@@ -37,6 +40,8 @@ class MainWindow(QMainWindow):
         self.subjects_btn = QPushButton("Matières")
         self.class_subjects_btn = QPushButton("Matières par classe")
         self.teacher_assignments_btn = QPushButton("Affectations enseignants")
+        self.fees_btn = QPushButton("Types de frais")
+        self.class_fees_btn = QPushButton("Frais par classe")
         self.payments_btn = QPushButton("Paiements")
         self.grades_btn = QPushButton("Notes")
         self.reports_btn = QPushButton("Bulletins")
@@ -48,6 +53,8 @@ class MainWindow(QMainWindow):
         menu_layout.addWidget(self.subjects_btn)
         menu_layout.addWidget(self.class_subjects_btn)
         menu_layout.addWidget(self.teacher_assignments_btn)
+        menu_layout.addWidget(self.fees_btn)
+        menu_layout.addWidget(self.class_fees_btn)
         menu_layout.addWidget(self.payments_btn)
         menu_layout.addWidget(self.grades_btn)
         menu_layout.addWidget(self.reports_btn)
@@ -62,6 +69,9 @@ class MainWindow(QMainWindow):
         self.page_class_subjects = ClassSubjectsPage(current_user=self.current_user)
         self.page_teacher_assignments = TeacherAssignmentsPage(current_user=self.current_user)
         self.page_classes = ClassesPage(current_user=self.current_user)
+        self.page_grades = GradesPage(current_user=self.current_user)
+        self.page_fees = FeesPage(current_user=self.current_user)
+        self.page_class_fees = ClassFeesPage(current_user=self.current_user)
 
         self.stack.addWidget(self.page_home)
         self.stack.addWidget(self.page_students)
@@ -70,6 +80,9 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.page_subjects)
         self.stack.addWidget(self.page_class_subjects)
         self.stack.addWidget(self.page_teacher_assignments)
+        self.stack.addWidget(self.page_grades)
+        self.stack.addWidget(self.page_fees)
+        self.stack.addWidget(self.page_class_fees)
 
         main_layout.addLayout(menu_layout)
         main_layout.addWidget(self.stack)
@@ -82,6 +95,9 @@ class MainWindow(QMainWindow):
         self.class_subjects_btn.clicked.connect(self.show_class_subjects)
         self.teacher_assignments_btn.clicked.connect(self.show_teacher_assignments)
         self.classes_btn.clicked.connect(self.show_classes)
+        self.grades_btn.clicked.connect(self.show_grades)
+        self.fees_btn.clicked.connect(self.show_fees)
+        self.class_fees_btn.clicked.connect(self.show_class_fees)
 
     def show_students(self):
         self.stack.setCurrentWidget(self.page_students)
@@ -100,3 +116,12 @@ class MainWindow(QMainWindow):
         
     def show_classes(self):
         self.stack.setCurrentWidget(self.page_classes)
+        
+    def show_grades(self):
+        self.stack.setCurrentWidget(self.page_grades)
+        
+    def show_fees(self):
+        self.stack.setCurrentWidget(self.page_fees)
+        
+    def show_class_fees(self):
+        self.stack.setCurrentWidget(self.page_class_fees)
