@@ -12,6 +12,8 @@ from ui.classes.classes_page import ClassesPage
 from ui.grades.grades_page import GradesPage
 from ui.fees.fees_page import FeesPage
 from ui.class_fees.class_fees_page import ClassFeesPage
+from ui.payments.payments_page import PaymentsPage
+from ui.finance.student_finance_page import StudentFinancePage
 
 
 class MainWindow(QMainWindow):
@@ -45,6 +47,9 @@ class MainWindow(QMainWindow):
         self.payments_btn = QPushButton("Paiements")
         self.grades_btn = QPushButton("Notes")
         self.reports_btn = QPushButton("Bulletins")
+        self.finance_btn = QPushButton("Situation élève")
+
+        
 
         menu_layout.addWidget(self.user_label)
         menu_layout.addWidget(self.students_btn)
@@ -56,8 +61,10 @@ class MainWindow(QMainWindow):
         menu_layout.addWidget(self.fees_btn)
         menu_layout.addWidget(self.class_fees_btn)
         menu_layout.addWidget(self.payments_btn)
+        menu_layout.addWidget(self.finance_btn)
         menu_layout.addWidget(self.grades_btn)
         menu_layout.addWidget(self.reports_btn)
+        
         menu_layout.addStretch()
 
         self.stack = QStackedWidget()
@@ -72,7 +79,11 @@ class MainWindow(QMainWindow):
         self.page_grades = GradesPage(current_user=self.current_user)
         self.page_fees = FeesPage(current_user=self.current_user)
         self.page_class_fees = ClassFeesPage(current_user=self.current_user)
-
+        self.page_payments = PaymentsPage(current_user=self.current_user)
+        self.page_student_finance = StudentFinancePage(current_user=self.current_user)
+        
+        
+        
         self.stack.addWidget(self.page_home)
         self.stack.addWidget(self.page_students)
         self.stack.addWidget(self.page_classes)
@@ -83,6 +94,8 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.page_grades)
         self.stack.addWidget(self.page_fees)
         self.stack.addWidget(self.page_class_fees)
+        self.stack.addWidget(self.page_payments)
+        self.stack.addWidget(self.page_student_finance)
 
         main_layout.addLayout(menu_layout)
         main_layout.addWidget(self.stack)
@@ -98,6 +111,11 @@ class MainWindow(QMainWindow):
         self.grades_btn.clicked.connect(self.show_grades)
         self.fees_btn.clicked.connect(self.show_fees)
         self.class_fees_btn.clicked.connect(self.show_class_fees)
+        self.payments_btn.clicked.connect(self.show_payments)
+        self.finance_btn.clicked.connect(
+            lambda: self.stack.setCurrentWidget(self.page_student_finance)
+        )
+                
 
     def show_students(self):
         self.stack.setCurrentWidget(self.page_students)
@@ -125,3 +143,6 @@ class MainWindow(QMainWindow):
         
     def show_class_fees(self):
         self.stack.setCurrentWidget(self.page_class_fees)
+        
+    def show_payments(self):
+        self.stack.setCurrentWidget(self.page_payments)
