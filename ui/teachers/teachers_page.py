@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
 from database.connection import get_connection
 from ui.teachers.add_teacher_dialog import AddTeacherDialog
 from ui.teachers.edit_teacher_dialog import EditTeacherDialog
+from utils.table_style import setup_table
 
 
 class TeachersPage(QWidget):
@@ -37,6 +38,7 @@ class TeachersPage(QWidget):
             "Date d'embauche"
         ])
         self.table.setColumnHidden(0, True)
+        setup_table(self.table)
 
         layout.addLayout(buttons_layout)
         layout.addWidget(self.table)

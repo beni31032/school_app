@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 
 from database.connection import get_connection
+from utils.table_style import setup_table
 
 
 class GradesPage(QWidget):
@@ -31,6 +32,7 @@ class GradesPage(QWidget):
         self.table.setHorizontalHeaderLabels(["ID Élève", "Élève", "Note"])
         self.table.setColumnHidden(0, True)
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        setup_table(self.table)
 
         self.filters_layout.addRow("Classe :", self.class_input)
         self.filters_layout.addRow("Matière :", self.subject_input)

@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import (
 )
 
 from database.connection import get_connection
+from utils.table_style import setup_table
 
 
 class StudentFinancePage(QWidget):
@@ -43,6 +44,8 @@ class StudentFinancePage(QWidget):
             "Payé",
             "Reste"
         ])
+        setup_table(self.summary_table)
+        
         self.summary_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
         layout.addWidget(QLabel("Résumé financier"))
@@ -61,6 +64,8 @@ class StudentFinancePage(QWidget):
             "Date",
             "Saisi par"
         ])
+        setup_table(self.payments_table)
+        
         self.payments_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
         layout.addWidget(QLabel("Historique des paiements"))

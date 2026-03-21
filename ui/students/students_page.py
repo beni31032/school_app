@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
 from database.connection import get_connection
 from ui.students.add_student_dialog import AddStudentDialog
 from ui.students.edit_student_dialog import EditStudentDialog
+from utils.table_style import setup_table
 
 
 class StudentsPage(QWidget):
@@ -39,7 +40,7 @@ class StudentsPage(QWidget):
             "Classe"
         ])
         self.table.setColumnHidden(0, True)
-
+        setup_table(self.table)
         layout.addLayout(buttons_layout)
         layout.addWidget(self.table)
 

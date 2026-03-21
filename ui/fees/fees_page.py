@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
 from database.connection import get_connection
 from ui.fees.add_fee_dialog import AddFeeDialog
 from ui.fees.edit_fee_dialog import EditFeeDialog
+from utils.table_style import setup_table
 
 
 class FeesPage(QWidget):
@@ -29,7 +30,7 @@ class FeesPage(QWidget):
         self.table.setColumnCount(3)
         self.table.setHorizontalHeaderLabels(["ID", "Nom", "Description"])
         self.table.setColumnHidden(0, True)
-
+        setup_table(self.table)
         layout.addLayout(buttons_layout)
         layout.addWidget(self.table)
         self.setLayout(layout)

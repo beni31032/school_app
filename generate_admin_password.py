@@ -1,7 +1,9 @@
 from utils.security import hash_password
 
-plain_password = "admin123"
-hashed = hash_password(plain_password)
+from utils.security import hash_password
 
-print("Mot de passe hashé :")
-print(hashed)
+print("beni:", hash_password("beni1234"))
+print("guillaume1:", hash_password("gui1234"))
+print("guillaume2:", hash_password("gui1234"))
+print("sibi:", hash_password("sibi1234"))
+print("reine:", hash_password("reine1234"))

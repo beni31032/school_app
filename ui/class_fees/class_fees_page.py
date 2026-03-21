@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
 from database.connection import get_connection
 from ui.class_fees.add_class_fee_dialog import AddClassFeeDialog
 from ui.class_fees.edit_class_fee_dialog import EditClassFeeDialog
+from utils.table_style import setup_table
 
 
 class ClassFeesPage(QWidget):
@@ -36,7 +37,7 @@ class ClassFeesPage(QWidget):
             "Année scolaire"
         ])
         self.table.setColumnHidden(0, True)
-
+        setup_table(self.table)
         layout.addLayout(buttons_layout)
         layout.addWidget(self.table)
         self.setLayout(layout)

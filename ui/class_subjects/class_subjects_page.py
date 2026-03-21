@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
 from database.connection import get_connection
 from ui.class_subjects.add_class_subject_dialog import AddClassSubjectDialog
 from ui.class_subjects.edit_class_subject_dialog import EditClassSubjectDialog
+from utils.table_style import setup_table
 
 
 class ClassSubjectsPage(QWidget):
@@ -35,7 +36,7 @@ class ClassSubjectsPage(QWidget):
             "Coefficient"
         ])
         self.table.setColumnHidden(0, True)
-
+        setup_table(self.table)
         layout.addLayout(buttons_layout)
         layout.addWidget(self.table)
         self.setLayout(layout)

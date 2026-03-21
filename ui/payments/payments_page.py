@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
 from database.connection import get_connection
 from ui.payments.add_payment_dialog import AddPaymentDialog
 from utils.receipt_generator import generate_receipt
+from utils.table_style import setup_table
 
 
 class PaymentsPage(QWidget):
@@ -49,6 +50,7 @@ class PaymentsPage(QWidget):
             "Saisi par"
         ])
         self.table.setColumnHidden(0, True)
+        setup_table(self.table)
 
         layout.addWidget(QLabel("Recherche"))
         layout.addWidget(self.search_input)

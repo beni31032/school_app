@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
 from database.connection import get_connection
 from ui.teacher_assignments.add_teacher_assignment_dialog import AddTeacherAssignmentDialog
 from ui.teacher_assignments.edit_teacher_assignment_dialog import EditTeacherAssignmentDialog
+from utils.table_style import setup_table
 
 
 class TeacherAssignmentsPage(QWidget):
@@ -36,6 +37,7 @@ class TeacherAssignmentsPage(QWidget):
             "Année scolaire"
         ])
         self.table.setColumnHidden(0, True)
+        setup_table(self.table)
 
         layout.addLayout(buttons_layout)
         layout.addWidget(self.table)
