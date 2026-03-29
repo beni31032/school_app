@@ -18,6 +18,7 @@ from ui.finance.student_finance_page import StudentFinancePage
 from ui.finance.discounts_page import DiscountsPage
 from ui.finance.financial_reports_page import FinancialReportsPage
 from ui.grades.primary_grades_page import PrimaryGradesPage
+from ui.grades.college_grades_page import CollegeGradesPage
 from ui.bulletins.primary_bulletins_page import PrimaryBulletinsPage
 
 
@@ -220,7 +221,7 @@ class MainWindow(QMainWindow):
         
         #Grades
         self.page_primary_grades = PrimaryGradesPage(current_user=self.current_user)
-        self.page_college_grades = QLabel("Le module Notes Collège sera ajouté ensuite.")
+        self.page_college_grades = CollegeGradesPage(current_user=self.current_user)
         self.page_college_grades.setStyleSheet("font-size: 16px; padding: 20px;")
         self.page_lycee_grades = QLabel("Le module Notes Lycée sera ajouté ensuite.")
         self.page_lycee_grades.setStyleSheet("font-size: 16px; padding: 20px;")

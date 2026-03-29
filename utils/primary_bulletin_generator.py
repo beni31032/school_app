@@ -220,7 +220,7 @@ def generate_primary_bulletin(student_id: int, term_id: int) -> str:
     # =========================
     # BAS DE PAGE
     # =========================
-    y = 65
+    y = 95
     c.setFont("Helvetica", 8)
     c.drawString(left, y, f"Titulaire : {data.get('titular_name') or '-'}")
     c.drawCentredString(width / 2, y, f"Lomé, le {datetime.today().strftime('%d/%m/%Y')}")
