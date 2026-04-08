@@ -14,6 +14,7 @@ class AddDiscountDialog(QDialog):
 
         self.current_user = current_user
         self.selected_student_id = None
+        self.current_school_year_id = None
 
         self.setWindowTitle("Ajouter une réduction")
         self.setMinimumWidth(600)
@@ -68,12 +69,39 @@ class AddDiscountDialog(QDialog):
         self.students_table.itemSelectionChanged.connect(self.on_student_selected)
         self.save_btn.clicked.connect(self.save_discount)
 
+        self.load_current_school_year()
         self.load_students()
         self.load_fees()
+
+    def load_current_school_year(self):
+        conn = get_connection()
+        if not conn:
+            QMessageBox.critical(self, "Erreur", "Connexion base impossible")
+            return
+
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id
+                FROM school_years
+                ORDER BY id DESC
+                LIMIT 1
+                """
+            )
+            row = cursor.fetchone()
+            if row:
+                self.current_school_year_id = row[0]
+        finally:
+            conn.close()
 
     def load_students(self):
         conn = get_connection()
         if not conn:
+            return
+
+        if self.current_school_year_id is None:
+            self.students_table.setRowCount(0)
             return
 
         search = f"%{self.search_input.text()}%"
@@ -81,21 +109,55 @@ class AddDiscountDialog(QDialog):
         try:
             cursor = conn.cursor()
 
-            cursor.execute(
-                """
-                SELECT
-                    s.id,
-                    s.last_name || ' ' || s.first_name,
-                    c.name
-                FROM students s
-                JOIN enrollments e ON e.student_id = s.id
-                JOIN classes c ON c.id = e.class_id
-                WHERE s.first_name ILIKE %s
-                OR s.last_name ILIKE %s
-                ORDER BY s.last_name
-                """,
-                (search, search)
-            )
+            if self.current_user["role"] == "ADMIN_GLOBAL":
+                cursor.execute(
+                    """
+                    SELECT
+                        s.id,
+                        s.last_name || ' ' || s.first_name,
+                        c.name
+                    FROM students s
+                    JOIN enrollments e ON e.student_id = s.id
+                    JOIN classes c ON c.id = e.class_id
+                    WHERE e.school_year_id = %s
+                      AND s.is_active = TRUE
+                      AND (
+                          s.first_name ILIKE %s
+                          OR s.last_name ILIKE %s
+                          OR s.matricule ILIKE %s
+                      )
+                    ORDER BY s.last_name, s.first_name
+                    """,
+                    (self.current_school_year_id, search, search, search)
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT
+                        s.id,
+                        s.last_name || ' ' || s.first_name,
+                        c.name
+                    FROM students s
+                    JOIN enrollments e ON e.student_id = s.id
+                    JOIN classes c ON c.id = e.class_id
+                    WHERE e.school_year_id = %s
+                      AND s.establishment_id = %s
+                      AND s.is_active = TRUE
+                      AND (
+                          s.first_name ILIKE %s
+                          OR s.last_name ILIKE %s
+                          OR s.matricule ILIKE %s
+                      )
+                    ORDER BY s.last_name, s.first_name
+                    """,
+                    (
+                        self.current_school_year_id,
+                        self.current_user["establishment_id"],
+                        search,
+                        search,
+                        search
+                    )
+                )
 
             rows = cursor.fetchall()
 
@@ -157,7 +219,7 @@ class AddDiscountDialog(QDialog):
 
         fee_id = int(self.fee_table.item(fee_row, 0).text())
         amount = float(self.amount_input.value())
-        reason = self.reason_input.text()
+        reason = self.reason_input.text().strip()
 
         if amount <= 0:
             QMessageBox.warning(
@@ -194,17 +256,31 @@ class AddDiscountDialog(QDialog):
                 )
                 return
 
-            # vérifier montant max
+            # vérifier montant max selon la classe de l'élève sur l'année en cours
             cursor.execute(
                 """
-                SELECT MAX(amount)
-                FROM class_fees
-                WHERE fee_id = %s
+                SELECT cf.amount
+                FROM class_fees cf
+                JOIN enrollments e
+                  ON e.class_id = cf.class_id
+                 AND e.school_year_id = cf.school_year_id
+                WHERE e.student_id = %s
+                  AND e.school_year_id = %s
+                  AND cf.fee_id = %s
+                LIMIT 1
                 """,
-                (fee_id,)
+                (self.selected_student_id, self.current_school_year_id, fee_id)
             )
 
             row = cursor.fetchone()
+            if not row:
+                QMessageBox.warning(
+                    self,
+                    "Validation",
+                    "Aucun frais configuré pour cet élève et ce type de frais."
+                )
+                return
+
             max_amount = float(row[0] or 0)
 
             if amount > max_amount:

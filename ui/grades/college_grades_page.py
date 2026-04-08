@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import (
     QHeaderView, QAbstractItemView
 )
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QColor, QBrush
 
 from database.connection import get_connection
 from utils.table_style import setup_table
@@ -26,32 +27,47 @@ class CollegeGradesPage(QWidget):
         self.save_btn = QPushButton("Enregistrer")
 
         self.table = QTableWidget()
-        setup_table(self.table, stretch=False)
+        setup_table(self.table, stretch=True)
+
         self.table.setEditTriggers(
             QAbstractItemView.EditTrigger.DoubleClicked |
             QAbstractItemView.EditTrigger.SelectedClicked |
             QAbstractItemView.EditTrigger.EditKeyPressed
         )
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectItems)
+        self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.table.verticalHeader().setVisible(False)
-        self.table.horizontalHeader().setVisible(True)
-        self.table.horizontalHeader().setMinimumHeight(36)
-        self.table.horizontalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
 
+        # Header : forçage visuel
+        self.table.horizontalHeader().setVisible(True)
+        self.table.horizontalHeader().setMinimumHeight(38)
+        self.table.horizontalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.table.horizontalHeader().setHighlightSections(False)
+
+        # Style direct table + header
         self.table.setStyleSheet("""
             QTableWidget {
                 background-color: white;
                 border: 1px solid #cbd5e1;
                 border-radius: 10px;
                 gridline-color: #d1d5db;
-                color: black;
+                color: #111827;
                 font-size: 13px;
+            }
+
+            QTableWidget::item {
+                padding: 4px;
+            }
+
+            QTableWidget::item:selected {
+                background-color: #bfdbfe;
+                color: #111827;
             }
 
             QHeaderView::section {
                 background-color: #2563eb;
                 color: white;
-                border: none;
+                border: 1px solid #1d4ed8;
                 padding: 6px;
                 font-weight: bold;
             }
@@ -248,11 +264,24 @@ class CollegeGradesPage(QWidget):
                 headers.append(f"{short_name} C/20")
                 headers.append(f"{short_name} P/20")
 
-            self.table.clear()
+            self.table.clearContents()
+            self.table.setRowCount(0)
             self.table.setColumnCount(len(headers))
             self.table.setHorizontalHeaderLabels(headers)
             self.table.setColumnHidden(0, True)
             self.table.setRowCount(len(students))
+
+            # Forcer le style des items d'en-tête
+            for col, label in enumerate(headers):
+                item = self.table.horizontalHeaderItem(col)
+                if item is None:
+                    item = QTableWidgetItem(label)
+                    self.table.setHorizontalHeaderItem(col, item)
+
+                item.setText(label)
+                item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                item.setForeground(QBrush(QColor("white")))
+                item.setBackground(QBrush(QColor("#2563eb")))
 
             for row_index, (student_id, student_name) in enumerate(students):
                 id_item = QTableWidgetItem(str(student_id))
@@ -286,14 +315,8 @@ class CollegeGradesPage(QWidget):
                 header.setSectionResizeMode(i, QHeaderView.ResizeMode.ResizeToContents)
 
             self.table.resizeRowsToContents()
-
             for row in range(self.table.rowCount()):
                 self.table.setRowHeight(row, 30)
-
-            for col in range(self.table.columnCount()):
-                item = self.table.horizontalHeaderItem(col)
-                if item:
-                    item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
 
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Chargement grille impossible : {e}")
@@ -337,6 +360,16 @@ class CollegeGradesPage(QWidget):
                         raw_value = item.text().strip() if item else ""
 
                         if raw_value == "":
+                            cursor.execute(
+                                """
+                                DELETE FROM grades
+                                WHERE student_id = %s
+                                  AND subject_id = %s
+                                  AND term_id = %s
+                                  AND grade_type = %s
+                                """,
+                                (student_id, subject_id, term_id, grade_type)
+                            )
                             col += 1
                             continue
 

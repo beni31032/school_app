@@ -61,26 +61,50 @@ class DiscountsPage(QWidget):
         try:
             cursor = conn.cursor()
 
-            cursor.execute(
-                """
-                SELECT
-                    d.id,
-                    s.last_name || ' ' || s.first_name,
-                    f.name,
-                    d.amount,
-                    COALESCE(d.reason, ''),
-                    d.created_at
-                FROM student_discounts d
-                JOIN students s ON s.id = d.student_id
-                JOIN fees f ON f.id = d.fee_id
-                WHERE
-                    s.first_name ILIKE %s
-                    OR s.last_name ILIKE %s
-                    OR f.name ILIKE %s
-                ORDER BY d.created_at DESC
-                """,
-                (search, search, search)
-            )
+            if self.current_user["role"] == "ADMIN_GLOBAL":
+                cursor.execute(
+                    """
+                    SELECT
+                        d.id,
+                        s.last_name || ' ' || s.first_name,
+                        f.name,
+                        d.amount,
+                        COALESCE(d.reason, ''),
+                        d.created_at
+                    FROM student_discounts d
+                    JOIN students s ON s.id = d.student_id
+                    JOIN fees f ON f.id = d.fee_id
+                    WHERE
+                        s.first_name ILIKE %s
+                        OR s.last_name ILIKE %s
+                        OR f.name ILIKE %s
+                    ORDER BY d.created_at DESC
+                    """,
+                    (search, search, search)
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT
+                        d.id,
+                        s.last_name || ' ' || s.first_name,
+                        f.name,
+                        d.amount,
+                        COALESCE(d.reason, ''),
+                        d.created_at
+                    FROM student_discounts d
+                    JOIN students s ON s.id = d.student_id
+                    JOIN fees f ON f.id = d.fee_id
+                    WHERE s.establishment_id = %s
+                      AND (
+                        s.first_name ILIKE %s
+                        OR s.last_name ILIKE %s
+                        OR f.name ILIKE %s
+                      )
+                    ORDER BY d.created_at DESC
+                    """,
+                    (self.current_user["establishment_id"], search, search, search)
+                )
 
             rows = cursor.fetchall()
 

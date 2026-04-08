@@ -264,10 +264,19 @@ class PrimaryGradesPage(QWidget):
                     raw_value = item.text().strip() if item else ""
 
                     if raw_value == "":
+                        cursor.execute(
+                            """
+                            DELETE FROM grades
+                            WHERE student_id = %s
+                              AND subject_id = %s
+                              AND term_id = %s
+                            """,
+                            (student_id, subject_id, term_id)
+                        )
                         continue
 
                     try:
-                        value = float(raw_value)
+                        value = float(raw_value.replace(",", "."))
                     except ValueError:
                         QMessageBox.warning(
                             self,

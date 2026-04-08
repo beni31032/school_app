@@ -22,10 +22,19 @@ def generate_primary_bulletin(student_id: int, term_id: int) -> str:
 
         cursor.execute(
             """
-            SELECT name, address, phone, email
-            FROM school_info
+            SELECT
+                e.name,
+                COALESCE(e.address, ''),
+                COALESCE(e.phone, ''),
+                COALESCE(si.email, '')
+            FROM classes c
+            JOIN establishments e ON e.id = c.establishment_id
+            LEFT JOIN school_info si ON TRUE
+            WHERE c.id = %s
+            ORDER BY si.id
             LIMIT 1
-            """
+            """,
+            (data["class_id"],)
         )
         school = cursor.fetchone()
 
@@ -43,9 +52,14 @@ def generate_primary_bulletin(student_id: int, term_id: int) -> str:
             FROM students s
             JOIN enrollments e ON e.student_id = s.id
             WHERE e.class_id = %s
+              AND e.school_year_id = (
+                    SELECT school_year_id
+                    FROM terms
+                    WHERE id = %s
+              )
               AND s.is_active = TRUE
             """,
-            (data["class_id"],)
+            (data["class_id"], term_id)
         )
         total, boys, girls = cursor.fetchone()
 

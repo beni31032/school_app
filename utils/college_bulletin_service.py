@@ -34,17 +34,7 @@ def get_term_average_for_student(class_id: int, student_id: int, term_id: int) -
         cursor = conn.cursor()
         cursor.execute(
             """
-            WITH subject_scores AS (
-                SELECT
-                    cs.subject_id,
-                    cs.coefficient,
-                    COALESCE(MAX(CASE WHEN g.grade_type = 'classe' THEN g.value END), 0) AS classe_note,
-                    COALESCE(MAX(CASE WHEN g.grade_type = 'compo' THEN g.value END), 0) AS compo_note
-                FROM class_subjects cs
-                WHERE cs.class_id = %s
-                GROUP BY cs.subject_id, cs.coefficient
-            ),
-            subject_averages AS (
+            WITH subject_averages AS (
                 SELECT
                     ss.subject_id,
                     ss.coefficient,
@@ -69,7 +59,7 @@ def get_term_average_for_student(class_id: int, student_id: int, term_id: int) -
                 COALESCE(SUM(note_def) / NULLIF(SUM(coefficient), 0), 0)
             FROM subject_averages
             """,
-            (class_id, student_id, term_id, class_id)
+            (student_id, term_id, class_id)
         )
         row = cursor.fetchone()
         return float(row[0] or 0)
@@ -78,7 +68,7 @@ def get_term_average_for_student(class_id: int, student_id: int, term_id: int) -
         conn.close()
 
 
-def get_general_rank(class_id: int, student_id: int, term_id: int) -> tuple[int, int]:
+def get_general_rank(class_id: int, student_id: int, term_id: int, school_year_id: int) -> tuple[int, int]:
     conn = get_connection()
     if not conn:
         raise Exception("Connexion base impossible")
@@ -102,6 +92,7 @@ def get_general_rank(class_id: int, student_id: int, term_id: int) -> tuple[int,
                    AND g.subject_id = cs.subject_id
                    AND g.term_id = %s
                 WHERE e.class_id = %s
+                  AND e.school_year_id = %s
                   AND st.is_active = TRUE
                 GROUP BY e.student_id, cs.subject_id, cs.coefficient
             ),
@@ -119,7 +110,7 @@ def get_general_rank(class_id: int, student_id: int, term_id: int) -> tuple[int,
             FROM student_totals st
             ORDER BY general_average DESC, st.student_id
             """,
-            (term_id, class_id)
+            (term_id, class_id, school_year_id)
         )
 
         rows = cursor.fetchall()
@@ -137,7 +128,13 @@ def get_general_rank(class_id: int, student_id: int, term_id: int) -> tuple[int,
         conn.close()
 
 
-def get_subject_rank(class_id: int, subject_id: int, student_id: int, term_id: int) -> int:
+def get_subject_rank(
+    class_id: int,
+    subject_id: int,
+    student_id: int,
+    term_id: int,
+    school_year_id: int
+) -> int:
     conn = get_connection()
     if not conn:
         raise Exception("Connexion base impossible")
@@ -159,11 +156,12 @@ def get_subject_rank(class_id: int, subject_id: int, student_id: int, term_id: i
                AND g.subject_id = %s
                AND g.term_id = %s
             WHERE e.class_id = %s
+              AND e.school_year_id = %s
               AND st.is_active = TRUE
             GROUP BY e.student_id
             ORDER BY subject_avg DESC, e.student_id
             """,
-            (subject_id, term_id, class_id)
+            (subject_id, term_id, class_id, school_year_id)
         )
 
         rows = cursor.fetchall()
@@ -178,7 +176,7 @@ def get_subject_rank(class_id: int, subject_id: int, student_id: int, term_id: i
         conn.close()
 
 
-def get_class_statistics(class_id: int, term_id: int) -> dict:
+def get_class_statistics(class_id: int, term_id: int, school_year_id: int) -> dict:
     conn = get_connection()
     if not conn:
         raise Exception("Connexion base impossible")
@@ -202,6 +200,7 @@ def get_class_statistics(class_id: int, term_id: int) -> dict:
                    AND g.subject_id = cs.subject_id
                    AND g.term_id = %s
                 WHERE e.class_id = %s
+                  AND e.school_year_id = %s
                   AND st.is_active = TRUE
                 GROUP BY e.student_id, cs.subject_id, cs.coefficient
             ),
@@ -223,7 +222,7 @@ def get_class_statistics(class_id: int, term_id: int) -> dict:
             FROM student_averages
             """
             ,
-            (term_id, class_id)
+            (term_id, class_id, school_year_id)
         )
 
         row = cursor.fetchone()
@@ -238,12 +237,30 @@ def get_class_statistics(class_id: int, term_id: int) -> dict:
         conn.close()
 
 
-def get_annual_average(class_id: int, student_id: int) -> float:
-    term_avgs = [
-        get_term_average_for_student(class_id, student_id, 1),
-        get_term_average_for_student(class_id, student_id, 2),
-        get_term_average_for_student(class_id, student_id, 3),
-    ]
+def get_school_year_term_ids(school_year_id: int) -> list[int]:
+    conn = get_connection()
+    if not conn:
+        raise Exception("Connexion base impossible")
+
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT id
+            FROM terms
+            WHERE school_year_id = %s
+            ORDER BY id
+            """,
+            (school_year_id,)
+        )
+        return [row[0] for row in cursor.fetchall()]
+    finally:
+        conn.close()
+
+
+def get_annual_average(class_id: int, student_id: int, school_year_id: int) -> float:
+    term_ids = get_school_year_term_ids(school_year_id)
+    term_avgs = [get_term_average_for_student(class_id, student_id, tid) for tid in term_ids]
     existing = [avg for avg in term_avgs if avg > 0]
 
     if not existing:
@@ -252,7 +269,7 @@ def get_annual_average(class_id: int, student_id: int) -> float:
     return round(sum(existing) / len(existing), 2)
 
 
-def get_annual_rank(class_id: int, student_id: int) -> int:
+def get_annual_rank(class_id: int, student_id: int, school_year_id: int) -> int:
     conn = get_connection()
     if not conn:
         raise Exception("Connexion base impossible")
@@ -265,16 +282,17 @@ def get_annual_rank(class_id: int, student_id: int) -> int:
             FROM enrollments e
             JOIN students s ON s.id = e.student_id
             WHERE e.class_id = %s
+              AND e.school_year_id = %s
               AND s.is_active = TRUE
             ORDER BY s.id
             """,
-            (class_id,)
+            (class_id, school_year_id)
         )
         student_ids = [row[0] for row in cursor.fetchall()]
 
         annuals = []
         for sid in student_ids:
-            annual_avg = get_annual_average(class_id, sid)
+            annual_avg = get_annual_average(class_id, sid, school_year_id)
             annuals.append((sid, annual_avg))
 
         annuals.sort(key=lambda x: (-x[1], x[0]))
@@ -289,7 +307,7 @@ def get_annual_rank(class_id: int, student_id: int) -> int:
         conn.close()
 
 
-def get_bulletin_number(class_id: int, student_id: int) -> int:
+def get_bulletin_number(class_id: int, student_id: int, school_year_id: int) -> int:
     conn = get_connection()
     if not conn:
         raise Exception("Connexion base impossible")
@@ -302,10 +320,11 @@ def get_bulletin_number(class_id: int, student_id: int) -> int:
             FROM students s
             JOIN enrollments e ON e.student_id = s.id
             WHERE e.class_id = %s
+              AND e.school_year_id = %s
               AND s.is_active = TRUE
             ORDER BY s.last_name, s.first_name
             """,
-            (class_id,)
+            (class_id, school_year_id)
         )
         rows = cursor.fetchall()
 
@@ -339,6 +358,7 @@ def get_college_bulletin_data(student_id: int, term_id: int) -> dict:
                 c.id AS class_id,
                 c.name AS class_name,
                 t.name AS term_name,
+                sy.id AS school_year_id,
                 sy.name AS school_year_name,
                 COALESCE(tt.last_name || ' ' || tt.first_name, '') AS titular_name
             FROM students s
@@ -367,6 +387,7 @@ def get_college_bulletin_data(student_id: int, term_id: int) -> dict:
             class_id,
             class_name,
             term_name,
+            school_year_id,
             school_year_name,
             titular_name,
         ) = student_row
@@ -381,9 +402,10 @@ def get_college_bulletin_data(student_id: int, term_id: int) -> dict:
             FROM students s
             JOIN enrollments e ON e.student_id = s.id
             WHERE e.class_id = %s
+              AND e.school_year_id = %s
               AND s.is_active = TRUE
             """,
-            (class_id,)
+            (class_id, school_year_id)
         )
         effectif, boys, girls = cursor.fetchone()
 
@@ -447,7 +469,7 @@ def get_college_bulletin_data(student_id: int, term_id: int) -> dict:
 
             moy_trim = round((classe_note + compo_note) / 2.0, 2)
             note_def = round(moy_trim * coefficient, 2)
-            rang = get_subject_rank(class_id, subject_id, student_id, term_id)
+            rang = get_subject_rank(class_id, subject_id, student_id, term_id, school_year_id)
             appreciation = get_college_appreciation(moy_trim)
 
             subjects.append({
@@ -467,17 +489,19 @@ def get_college_bulletin_data(student_id: int, term_id: int) -> dict:
             total_notes += note_def
 
         general_average = round(total_notes / total_coef, 2) if total_coef > 0 else 0.0
-        general_rank, _ = get_general_rank(class_id, student_id, term_id)
+        general_rank, _ = get_general_rank(class_id, student_id, term_id, school_year_id)
 
-        avg_trim_1 = get_term_average_for_student(class_id, student_id, 1)
-        avg_trim_2 = get_term_average_for_student(class_id, student_id, 2)
-        avg_trim_3 = get_term_average_for_student(class_id, student_id, 3)
-        annual_average = get_annual_average(class_id, student_id)
-        annual_rank = get_annual_rank(class_id, student_id)
+        term_ids = get_school_year_term_ids(school_year_id)
+        term_averages = [get_term_average_for_student(class_id, student_id, tid) for tid in term_ids[:3]]
+        while len(term_averages) < 3:
+            term_averages.append(0.0)
 
-        class_stats = get_class_statistics(class_id, term_id)
+        annual_average = get_annual_average(class_id, student_id, school_year_id)
+        annual_rank = get_annual_rank(class_id, student_id, school_year_id)
+
+        class_stats = get_class_statistics(class_id, term_id, school_year_id)
         annual_observation = get_general_observation(annual_average)
-        bulletin_number = get_bulletin_number(class_id, student_id)
+        bulletin_number = get_bulletin_number(class_id, student_id, school_year_id)
 
         return {
             "student_id": student_id,
@@ -500,9 +524,9 @@ def get_college_bulletin_data(student_id: int, term_id: int) -> dict:
             "total_notes": round(total_notes, 2),
             "general_average": general_average,
             "general_rank": general_rank,
-            "avg_trim_1": round(avg_trim_1, 2),
-            "avg_trim_2": round(avg_trim_2, 2),
-            "avg_trim_3": round(avg_trim_3, 2),
+            "avg_trim_1": round(term_averages[0], 2),
+            "avg_trim_2": round(term_averages[1], 2),
+            "avg_trim_3": round(term_averages[2], 2),
             "annual_average": annual_average,
             "annual_rank": annual_rank,
             "class_highest_average": class_stats["highest_average"],
