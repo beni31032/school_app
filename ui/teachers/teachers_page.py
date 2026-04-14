@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
 from database.connection import get_connection
 from ui.teachers.add_teacher_dialog import AddTeacherDialog
 from ui.teachers.edit_teacher_dialog import EditTeacherDialog
+from utils.teacher_service import ensure_teacher_schema
 from utils.table_style import setup_table
 
 
@@ -14,6 +15,7 @@ class TeachersPage(QWidget):
         super().__init__()
 
         self.current_user = current_user
+        ensure_teacher_schema()
 
         layout = QVBoxLayout()
 

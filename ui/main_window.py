@@ -9,21 +9,29 @@ from PyQt6.QtWidgets import (
 from ui.dashboard.dashboard_page import DashboardPage
 from ui.students.students_page import StudentsPage
 from ui.teachers.teachers_page import TeachersPage
+from ui.staff.staff_page import StaffPage
 from ui.classes.classes_page import ClassesPage
 from ui.subjects.subjects_page import SubjectsPage
 from ui.class_subjects.class_subjects_page import ClassSubjectsPage
 from ui.teacher_assignments.teacher_assignments_page import TeacherAssignmentsPage
+from ui.timetables.timetables_page import TimetablesPage
+from ui.lists.lists_page import ListsPage
+from ui.statistics.statistics_page import StatisticsPage
 from ui.grades.grades_page import GradesPage
 from ui.fees.fees_page import FeesPage
 from ui.class_fees.class_fees_page import ClassFeesPage
 from ui.payments.payments_page import PaymentsPage
 from ui.finance.student_finance_page import StudentFinancePage
 from ui.finance.discounts_page import DiscountsPage
+from ui.finance.expenses_page import ExpensesPage
+from ui.finance.salaries_page import SalariesPage
 from ui.finance.financial_reports_page import FinancialReportsPage
 from ui.grades.primary_grades_page import PrimaryGradesPage
 from ui.grades.college_grades_page import CollegeGradesPage
+from ui.grades.lycee_grades_page import LyceeGradesPage
 from ui.bulletins.primary_bulletins_page import PrimaryBulletinsPage
 from ui.bulletins.college_bulletins_page import CollegeBulletinsPage
+from ui.bulletins.lycee_bulletins_page import LyceeBulletinsPage
 
 
 class MainWindow(QMainWindow):
@@ -141,13 +149,19 @@ class MainWindow(QMainWindow):
         self.dashboard_btn = self.create_menu_button("Dashboard", "🏠")
         self.students_btn = self.create_menu_button("Élèves", "🎓")
         self.teachers_btn = self.create_menu_button("Enseignants", "👨‍🏫")
+        self.staff_btn = self.create_menu_button("Employés", "👷")
         self.classes_btn = self.create_menu_button("Classes", "🏫")
         self.subjects_btn = self.create_menu_button("Matières", "📚")
         self.class_subjects_btn = self.create_menu_button("Matières par classe", "📘")
         self.teacher_assignments_btn = self.create_menu_button("Affectations", "🧑‍💼")
+        self.timetables_btn = self.create_menu_button("Emplois du temps", "🗓️")
+        self.lists_btn = self.create_menu_button("Listes", "📋")
+        self.statistics_btn = self.create_menu_button("Statistiques", "📈")
         self.fees_btn = self.create_menu_button("Types de frais", "💰")
         self.class_fees_btn = self.create_menu_button("Frais par classe", "💳")
         self.discounts_btn = self.create_menu_button("Réductions", "🏷️")
+        self.expenses_btn = self.create_menu_button("Dépenses", "🧾")
+        self.salaries_btn = self.create_menu_button("Salaires", "💼")
         self.payments_btn = self.create_menu_button("Paiements", "💵")
         self.finance_btn = self.create_menu_button("Situation élève", "📊")
         # Grades menu with submenu
@@ -185,13 +199,19 @@ class MainWindow(QMainWindow):
         menu_layout.addWidget(self.dashboard_btn)
         menu_layout.addWidget(self.students_btn)
         menu_layout.addWidget(self.teachers_btn)
+        menu_layout.addWidget(self.staff_btn)
         menu_layout.addWidget(self.classes_btn)
         menu_layout.addWidget(self.subjects_btn)
         menu_layout.addWidget(self.class_subjects_btn)
         menu_layout.addWidget(self.teacher_assignments_btn)
+        menu_layout.addWidget(self.timetables_btn)
+        menu_layout.addWidget(self.lists_btn)
+        menu_layout.addWidget(self.statistics_btn)
         menu_layout.addWidget(self.fees_btn)
         menu_layout.addWidget(self.class_fees_btn)
         menu_layout.addWidget(self.discounts_btn)
+        menu_layout.addWidget(self.expenses_btn)
+        menu_layout.addWidget(self.salaries_btn)
         menu_layout.addWidget(self.payments_btn)
         menu_layout.addWidget(self.finance_btn)
         menu_layout.addWidget(self.grades_btn)
@@ -211,38 +231,49 @@ class MainWindow(QMainWindow):
         self.page_home = DashboardPage(current_user=self.current_user)
         self.page_students = StudentsPage(current_user=self.current_user)
         self.page_teachers = TeachersPage(current_user=self.current_user)
+        self.page_staff = StaffPage(current_user=self.current_user)
         self.page_classes = ClassesPage(current_user=self.current_user)
         self.page_subjects = SubjectsPage(current_user=self.current_user)
         self.page_class_subjects = ClassSubjectsPage(current_user=self.current_user)
         self.page_teacher_assignments = TeacherAssignmentsPage(current_user=self.current_user)
+        self.page_timetables = TimetablesPage(current_user=self.current_user)
+        self.page_lists = ListsPage(current_user=self.current_user)
+        self.page_statistics = StatisticsPage(current_user=self.current_user)
         self.page_grades = GradesPage(current_user=self.current_user)
         self.page_fees = FeesPage(current_user=self.current_user)
         self.page_class_fees = ClassFeesPage(current_user=self.current_user)
         self.page_payments = PaymentsPage(current_user=self.current_user)
         self.page_student_finance = StudentFinancePage(current_user=self.current_user)
         self.page_discounts = DiscountsPage(self.current_user)
+        self.page_expenses = ExpensesPage(self.current_user)
+        self.page_salaries = SalariesPage(self.current_user)
         self.page_financial_reports = FinancialReportsPage(self.current_user)
         
         #Grades
         self.page_primary_grades = PrimaryGradesPage(current_user=self.current_user)
         self.page_college_grades = CollegeGradesPage(current_user=self.current_user)
-        self.page_lycee_grades = QLabel("Le module Notes Lycée sera ajouté ensuite.")
-        self.page_lycee_grades.setStyleSheet("font-size: 16px; padding: 20px;")
+        self.page_lycee_grades = LyceeGradesPage(current_user=self.current_user)
         #Bulletins
         self.page_primary_bulletins = PrimaryBulletinsPage(current_user=self.current_user)
         self.page_college_bulletins = CollegeBulletinsPage(current_user=self.current_user)
-        self.page_lycee_bulletins = QLabel("Le module Bulletins Lycée sera ajouté ensuite.")
+        self.page_lycee_bulletins = LyceeBulletinsPage(current_user=self.current_user)
 
         self.stack.addWidget(self.page_home)
         self.stack.addWidget(self.page_students)
         self.stack.addWidget(self.page_teachers)
+        self.stack.addWidget(self.page_staff)
         self.stack.addWidget(self.page_classes)
         self.stack.addWidget(self.page_subjects)
         self.stack.addWidget(self.page_class_subjects)
         self.stack.addWidget(self.page_teacher_assignments)
+        self.stack.addWidget(self.page_timetables)
+        self.stack.addWidget(self.page_lists)
+        self.stack.addWidget(self.page_statistics)
         self.stack.addWidget(self.page_fees)
         self.stack.addWidget(self.page_class_fees)
         self.stack.addWidget(self.page_discounts)
+        self.stack.addWidget(self.page_expenses)
+        self.stack.addWidget(self.page_salaries)
         self.stack.addWidget(self.page_payments)
         self.stack.addWidget(self.page_student_finance)
         self.stack.addWidget(self.page_grades)
@@ -271,6 +302,9 @@ class MainWindow(QMainWindow):
         self.teachers_btn.clicked.connect(
             lambda: self.switch_page(self.teachers_btn, self.page_teachers)
         )
+        self.staff_btn.clicked.connect(
+            lambda: self.switch_page(self.staff_btn, self.page_staff)
+        )
         self.classes_btn.clicked.connect(
             lambda: self.switch_page(self.classes_btn, self.page_classes)
         )
@@ -283,6 +317,15 @@ class MainWindow(QMainWindow):
         self.teacher_assignments_btn.clicked.connect(
             lambda: self.switch_page(self.teacher_assignments_btn, self.page_teacher_assignments)
         )
+        self.timetables_btn.clicked.connect(
+            lambda: self.switch_page(self.timetables_btn, self.page_timetables)
+        )
+        self.lists_btn.clicked.connect(
+            lambda: self.switch_page(self.lists_btn, self.page_lists)
+        )
+        self.statistics_btn.clicked.connect(
+            lambda: self.switch_page(self.statistics_btn, self.page_statistics)
+        )
         self.fees_btn.clicked.connect(
             lambda: self.switch_page(self.fees_btn, self.page_fees)
         )
@@ -291,6 +334,12 @@ class MainWindow(QMainWindow):
         )
         self.discounts_btn.clicked.connect(
             lambda: self.switch_page(self.discounts_btn, self.page_discounts)
+        )
+        self.expenses_btn.clicked.connect(
+            lambda: self.switch_page(self.expenses_btn, self.page_expenses)
+        )
+        self.salaries_btn.clicked.connect(
+            lambda: self.switch_page(self.salaries_btn, self.page_salaries)
         )
         self.payments_btn.clicked.connect(
             lambda: self.switch_page(self.payments_btn, self.page_payments)
