@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QGridLayout, QLabel, QFrame,
-    QTableWidget, QTableWidgetItem, QMessageBox, QHeaderView
+    QTableWidget, QTableWidgetItem, QMessageBox, QHeaderView,
+    QHBoxLayout, QComboBox, QPushButton
 )
 from PyQt6.QtCore import Qt
 
@@ -36,6 +37,7 @@ class FinancialReportsPage(QWidget):
         super().__init__()
 
         self.current_user = current_user
+        self.is_global_admin = self.current_user["role"] == "ADMIN_GLOBAL"
 
         layout = QVBoxLayout()
         layout.setContentsMargins(20, 20, 20, 20)
@@ -47,6 +49,21 @@ class FinancialReportsPage(QWidget):
         self.subtitle_label = QLabel("Vue d'ensemble des encaissements")
         self.subtitle_label.setObjectName("dashboardSubtitle")
 
+        self.filters_layout = QHBoxLayout()
+        self.establishment_filter = QComboBox()
+        self.period_filter = QComboBox()
+        self.refresh_btn = QPushButton("Actualiser")
+
+        self.period_filter.addItem("Aujourd'hui", "TODAY")
+        self.period_filter.addItem("Ce mois", "MONTH")
+        self.period_filter.addItem("Toute période", "ALL")
+
+        self.filters_layout.addWidget(QLabel("Établissement"))
+        self.filters_layout.addWidget(self.establishment_filter)
+        self.filters_layout.addWidget(QLabel("Période"))
+        self.filters_layout.addWidget(self.period_filter)
+        self.filters_layout.addWidget(self.refresh_btn)
+
         # Cards
         self.cards_layout = QGridLayout()
         self.cards_layout.setHorizontalSpacing(12)
@@ -54,9 +71,11 @@ class FinancialReportsPage(QWidget):
 
         self.today_card = StatCard("Total encaissé aujourd'hui", "0 FCFA")
         self.month_card = StatCard("Total encaissé ce mois", "0 FCFA")
+        self.count_card = StatCard("Nombre de paiements", "0")
 
         self.cards_layout.addWidget(self.today_card, 0, 0)
         self.cards_layout.addWidget(self.month_card, 0, 1)
+        self.cards_layout.addWidget(self.count_card, 0, 2)
 
         # Tableau frais
         self.fees_title = QLabel("Encaissement par type de frais")
@@ -69,6 +88,7 @@ class FinancialReportsPage(QWidget):
             "Total encaissé"
         ])
         setup_table(self.fees_table, stretch=True)
+        self.fees_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
         # Tableau classes
         self.classes_title = QLabel("Encaissement par classe")
@@ -81,9 +101,11 @@ class FinancialReportsPage(QWidget):
             "Total encaissé"
         ])
         setup_table(self.classes_table, stretch=True)
+        self.classes_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
         layout.addWidget(self.title_label)
         layout.addWidget(self.subtitle_label)
+        layout.addLayout(self.filters_layout)
         layout.addLayout(self.cards_layout)
         layout.addWidget(self.fees_title)
         layout.addWidget(self.fees_table)
@@ -93,6 +115,10 @@ class FinancialReportsPage(QWidget):
         self.setLayout(layout)
 
         self.apply_local_styles()
+        self.load_establishments()
+        self.establishment_filter.currentIndexChanged.connect(self.load_reports)
+        self.period_filter.currentIndexChanged.connect(self.load_reports)
+        self.refresh_btn.clicked.connect(self.load_reports)
         self.load_reports()
 
     def apply_local_styles(self):
@@ -135,7 +161,50 @@ class FinancialReportsPage(QWidget):
                 color: #111827;
                 margin-top: 6px;
             }
+            QLabel {
+                color: #111827;
+                font-weight: 600;
+            }
+            QComboBox {
+                background-color: #303030;
+                color: #ffffff;
+                border: 1px solid #525252;
+                border-radius: 4px;
+                padding: 6px 10px;
+                min-height: 28px;
+            }
+            QComboBox QAbstractItemView {
+                background-color: #2b2b2b;
+                color: #ffffff;
+                selection-background-color: #2563eb;
+                selection-color: #ffffff;
+            }
         """)
+
+    def load_establishments(self):
+        self.establishment_filter.clear()
+        conn = get_connection()
+        if not conn:
+            return
+
+        try:
+            cursor = conn.cursor()
+            if self.is_global_admin:
+                self.establishment_filter.addItem("Tous", None)
+                cursor.execute("SELECT id, name FROM establishments ORDER BY name")
+                for est_id, name in cursor.fetchall():
+                    self.establishment_filter.addItem(name, est_id)
+            else:
+                cursor.execute(
+                    "SELECT id, name FROM establishments WHERE id = %s",
+                    (self.current_user["establishment_id"],),
+                )
+                row = cursor.fetchone()
+                if row:
+                    self.establishment_filter.addItem(row[1], row[0])
+                self.establishment_filter.setEnabled(False)
+        finally:
+            conn.close()
 
     def load_reports(self):
         conn = get_connection()
@@ -146,136 +215,137 @@ class FinancialReportsPage(QWidget):
 
         try:
             cursor = conn.cursor()
+            establishment_id = self.establishment_filter.currentData()
+            period_mode = self.period_filter.currentData()
+
+            payment_filter = []
+            payment_params = []
+            student_filter = []
+            student_params = []
+
+            if self.is_global_admin:
+                if establishment_id is not None:
+                    student_filter.append("s.establishment_id = %s")
+                    student_params.append(establishment_id)
+                    payment_filter.append("s.establishment_id = %s")
+                    payment_params.append(establishment_id)
+            else:
+                student_filter.append("s.establishment_id = %s")
+                student_params.append(self.current_user["establishment_id"])
+                payment_filter.append("s.establishment_id = %s")
+                payment_params.append(self.current_user["establishment_id"])
+
+            if period_mode == "TODAY":
+                payment_filter.append("p.payment_date = CURRENT_DATE")
+            elif period_mode == "MONTH":
+                payment_filter.append("DATE_TRUNC('month', p.payment_date) = DATE_TRUNC('month', CURRENT_DATE)")
+
+            payment_where = "WHERE " + " AND ".join(payment_filter) if payment_filter else ""
+            student_where = "WHERE " + " AND ".join(student_filter) if student_filter else ""
 
             # Total aujourd'hui
-            if self.current_user["role"] == "ADMIN_GLOBAL":
-                cursor.execute(
-                    """
-                    SELECT COALESCE(SUM(amount), 0)
-                    FROM payments
-                    WHERE payment_date = CURRENT_DATE
-                    """
-                )
-            else:
-                cursor.execute(
-                    """
-                    SELECT COALESCE(SUM(p.amount), 0)
-                    FROM payments p
-                    JOIN students s ON s.id = p.student_id
-                    WHERE p.payment_date = CURRENT_DATE
-                      AND s.establishment_id = %s
-                    """,
-                    (self.current_user["establishment_id"],)
-                )
+            today_params = payment_params.copy()
+            today_where = payment_filter.copy()
+            today_where.append("p.payment_date = CURRENT_DATE")
+            cursor.execute(
+                f"""
+                SELECT COALESCE(SUM(p.amount), 0)
+                FROM payments p
+                JOIN students s ON s.id = p.student_id
+                WHERE {' AND '.join(today_where)}
+                """,
+                today_params
+            )
 
             today_total = float(cursor.fetchone()[0] or 0)
 
             # Total ce mois
-            if self.current_user["role"] == "ADMIN_GLOBAL":
-                cursor.execute(
-                    """
-                    SELECT COALESCE(SUM(amount), 0)
-                    FROM payments
-                    WHERE DATE_TRUNC('month', payment_date) =
-                          DATE_TRUNC('month', CURRENT_DATE)
-                    """
-                )
-            else:
-                cursor.execute(
-                    """
-                    SELECT COALESCE(SUM(p.amount), 0)
-                    FROM payments p
-                    JOIN students s ON s.id = p.student_id
-                    WHERE DATE_TRUNC('month', p.payment_date) =
-                          DATE_TRUNC('month', CURRENT_DATE)
-                      AND s.establishment_id = %s
-                    """,
-                    (self.current_user["establishment_id"],)
-                )
+            month_params = payment_params.copy()
+            month_where = payment_filter.copy()
+            month_where.append("DATE_TRUNC('month', p.payment_date) = DATE_TRUNC('month', CURRENT_DATE)")
+            cursor.execute(
+                f"""
+                SELECT COALESCE(SUM(p.amount), 0)
+                FROM payments p
+                JOIN students s ON s.id = p.student_id
+                WHERE {' AND '.join(month_where)}
+                """,
+                month_params
+            )
 
             month_total = float(cursor.fetchone()[0] or 0)
 
+            cursor.execute(
+                f"""
+                SELECT COUNT(*)
+                FROM payments p
+                JOIN students s ON s.id = p.student_id
+                {payment_where}
+                """,
+                payment_params
+            )
+            payments_count = int(cursor.fetchone()[0] or 0)
+
             self.today_card.value_label.setText(f"{today_total:,.0f} FCFA")
             self.month_card.value_label.setText(f"{month_total:,.0f} FCFA")
+            self.count_card.value_label.setText(str(payments_count))
 
             # Par type de frais
-            if self.current_user["role"] == "ADMIN_GLOBAL":
-                cursor.execute(
-                    """
-                    SELECT
-                        COALESCE(f.name, ff.name),
-                        SUM(p.amount)
-                    FROM payments p
-                    LEFT JOIN class_fees cf ON cf.id = p.class_fee_id
-                    LEFT JOIN fees f ON f.id = cf.fee_id
-                    LEFT JOIN fees ff ON ff.id = p.fee_id
-                    GROUP BY COALESCE(f.name, ff.name)
-                    ORDER BY 2 DESC
-                    """
-                )
-            else:
-                cursor.execute(
-                    """
-                    SELECT
-                        COALESCE(f.name, ff.name),
-                        SUM(p.amount)
-                    FROM payments p
-                    JOIN students s ON s.id = p.student_id
-                    LEFT JOIN class_fees cf ON cf.id = p.class_fee_id
-                    LEFT JOIN fees f ON f.id = cf.fee_id
-                    LEFT JOIN fees ff ON ff.id = p.fee_id
-                    WHERE s.establishment_id = %s
-                    GROUP BY COALESCE(f.name, ff.name)
-                    ORDER BY 2 DESC
-                    """,
-                    (self.current_user["establishment_id"],)
-                )
+            cursor.execute(
+                f"""
+                SELECT
+                    COALESCE(f.name, ff.name),
+                    SUM(p.amount)
+                FROM payments p
+                JOIN students s ON s.id = p.student_id
+                LEFT JOIN class_fees cf ON cf.id = p.class_fee_id
+                LEFT JOIN fees f ON f.id = cf.fee_id
+                LEFT JOIN fees ff ON ff.id = p.fee_id
+                {payment_where}
+                GROUP BY COALESCE(f.name, ff.name)
+                ORDER BY 2 DESC
+                """,
+                payment_params
+            )
 
             fee_rows = cursor.fetchall()
 
             self.fees_table.setRowCount(len(fee_rows))
             for i, row in enumerate(fee_rows):
-                self.fees_table.setItem(i, 0, QTableWidgetItem(str(row[0])))
-                self.fees_table.setItem(i, 1, QTableWidgetItem(f"{float(row[1]):,.0f}"))
+                fee_item = QTableWidgetItem(str(row[0]))
+                fee_item.setFlags(fee_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                total_item = QTableWidgetItem(f"{float(row[1]):,.0f}")
+                total_item.setFlags(total_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                self.fees_table.setItem(i, 0, fee_item)
+                self.fees_table.setItem(i, 1, total_item)
 
             # Par classe
-            if self.current_user["role"] == "ADMIN_GLOBAL":
-                cursor.execute(
-                    """
-                    SELECT
-                        c.name,
-                        SUM(p.amount)
-                    FROM payments p
-                    JOIN students s ON s.id = p.student_id
-                    JOIN enrollments e ON e.student_id = s.id
-                    JOIN classes c ON c.id = e.class_id
-                    GROUP BY c.name
-                    ORDER BY 2 DESC
-                    """
-                )
-            else:
-                cursor.execute(
-                    """
-                    SELECT
-                        c.name,
-                        SUM(p.amount)
-                    FROM payments p
-                    JOIN students s ON s.id = p.student_id
-                    JOIN enrollments e ON e.student_id = s.id
-                    JOIN classes c ON c.id = e.class_id
-                    WHERE s.establishment_id = %s
-                    GROUP BY c.name
-                    ORDER BY 2 DESC
-                    """,
-                    (self.current_user["establishment_id"],)
-                )
+            cursor.execute(
+                f"""
+                SELECT
+                    c.name,
+                    SUM(p.amount)
+                FROM payments p
+                JOIN students s ON s.id = p.student_id
+                JOIN enrollments e ON e.student_id = s.id
+                JOIN classes c ON c.id = e.class_id
+                {student_where}
+                GROUP BY c.name
+                ORDER BY 2 DESC
+                """,
+                student_params
+            )
 
             class_rows = cursor.fetchall()
 
             self.classes_table.setRowCount(len(class_rows))
             for i, row in enumerate(class_rows):
-                self.classes_table.setItem(i, 0, QTableWidgetItem(str(row[0])))
-                self.classes_table.setItem(i, 1, QTableWidgetItem(f"{float(row[1]):,.0f}"))
+                class_item = QTableWidgetItem(str(row[0]))
+                class_item.setFlags(class_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                total_item = QTableWidgetItem(f"{float(row[1]):,.0f}")
+                total_item.setFlags(total_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                self.classes_table.setItem(i, 0, class_item)
+                self.classes_table.setItem(i, 1, total_item)
 
         except Exception as e:
             QMessageBox.critical(self, "Erreur", str(e))

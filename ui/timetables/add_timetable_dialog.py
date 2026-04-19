@@ -11,6 +11,8 @@ from PyQt6.QtWidgets import (
 )
 
 from database.connection import get_connection
+from utils.subject_service import ensure_subject_schema
+from utils.teacher_service import ensure_teacher_schema
 
 
 class AddTimetableDialog(QDialog):
@@ -18,6 +20,8 @@ class AddTimetableDialog(QDialog):
         super().__init__(parent)
         self.current_user = current_user
         self.is_global_admin = self.current_user["role"] == "ADMIN_GLOBAL"
+        ensure_teacher_schema()
+        ensure_subject_schema()
 
         self.setWindowTitle("Ajouter emploi du temps")
         self.setFixedWidth(460)
@@ -58,12 +62,44 @@ class AddTimetableDialog(QDialog):
         layout.addLayout(form)
         layout.addLayout(btns)
         self.setLayout(layout)
+        self.apply_local_styles()
 
         self.save_btn.clicked.connect(self.save_item)
         self.cancel_btn.clicked.connect(self.reject)
         self.establishment_input.currentIndexChanged.connect(self.load_dependent_data)
+        self.class_input.currentIndexChanged.connect(self.load_subjects_for_class)
 
         self.load_base_data()
+
+    def apply_local_styles(self):
+        self.setStyleSheet(
+            """
+            QDialog { background-color: #f8fafc; }
+            QLabel {
+                color: #111827;
+                font-weight: 600;
+                min-width: 135px;
+            }
+            QComboBox, QTimeEdit {
+                background-color: white;
+                color: #111827;
+                border: 1px solid #cbd5e1;
+                border-radius: 6px;
+                padding: 6px 8px;
+                min-height: 28px;
+            }
+            QPushButton {
+                background-color: #2563eb;
+                color: white;
+                border: none;
+                border-radius: 7px;
+                padding: 8px 12px;
+                font-weight: 700;
+            }
+            QPushButton:hover { background-color: #1d4ed8; }
+            QPushButton:pressed { background-color: #1e40af; }
+            """
+        )
 
     def load_base_data(self):
         conn = get_connection()
@@ -115,30 +151,48 @@ class AddTimetableDialog(QDialog):
             for class_id, name in cur.fetchall():
                 self.class_input.addItem(name, class_id)
 
-            self.subject_input.clear()
-            cur.execute(
-                """
-                SELECT id, name FROM subjects
-                WHERE establishment_id = %s
-                ORDER BY name
-                """,
-                (est_id,),
-            )
-            for subject_id, name in cur.fetchall():
-                self.subject_input.addItem(name, subject_id)
-
             self.teacher_input.clear()
             cur.execute(
                 """
                 SELECT id, last_name || ' ' || first_name
                 FROM teachers
                 WHERE establishment_id = %s
+                  AND COALESCE(is_active, TRUE) = TRUE
                 ORDER BY last_name, first_name
                 """,
                 (est_id,),
             )
             for teacher_id, name in cur.fetchall():
                 self.teacher_input.addItem(name, teacher_id)
+
+            self.load_subjects_for_class()
+        finally:
+            conn.close()
+
+    def load_subjects_for_class(self):
+        self.subject_input.clear()
+
+        class_id = self.class_input.currentData()
+        if class_id is None:
+            return
+
+        conn = get_connection()
+        if not conn:
+            return
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT s.id, s.name
+                FROM class_subjects cs
+                JOIN subjects s ON s.id = cs.subject_id
+                WHERE cs.class_id = %s
+                ORDER BY s.name
+                """,
+                (class_id,),
+            )
+            for subject_id, name in cur.fetchall():
+                self.subject_input.addItem(name, subject_id)
         finally:
             conn.close()
 
@@ -178,6 +232,20 @@ class AddTimetableDialog(QDialog):
             )
             if cur.fetchone():
                 QMessageBox.warning(self, "Validation", "Conflit d'horaire pour cette classe.")
+                return
+
+            cur.execute(
+                """
+                SELECT 1
+                FROM timetables
+                WHERE teacher_id=%s AND school_year_id=%s AND day_of_week=%s
+                  AND NOT (end_time <= %s::time OR start_time >= %s::time)
+                LIMIT 1
+                """,
+                (teacher_id, school_year_id, day, start_time, end_time),
+            )
+            if cur.fetchone():
+                QMessageBox.warning(self, "Validation", "Conflit d'horaire pour cet enseignant.")
                 return
 
             cur.execute(

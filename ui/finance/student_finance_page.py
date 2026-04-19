@@ -1,10 +1,12 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QFormLayout, QLineEdit,
     QTableWidget, QTableWidgetItem, QLabel, QMessageBox,
-    QHeaderView
+    QHeaderView, QHBoxLayout, QComboBox, QPushButton, QFrame
 )
+from PyQt6.QtCore import Qt
 
 from database.connection import get_connection
+from ui.finance.student_finance_details_dialog import StudentFinanceDetailsDialog
 from utils.table_style import setup_table
 
 
@@ -15,15 +17,31 @@ class StudentFinancePage(QWidget):
         self.current_user = current_user
         self.current_school_year_id = None
         self.selected_student_id = None
+        self.is_global_admin = self.current_user["role"] == "ADMIN_GLOBAL"
 
         layout = QVBoxLayout()
         form = QFormLayout()
+        filters_layout = QHBoxLayout()
+        buttons_layout = QHBoxLayout()
 
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Rechercher un élève par nom, prénom ou matricule")
+        self.establishment_filter = QComboBox()
+        self.class_filter = QComboBox()
+        self.details_btn = QPushButton("Voir fiche complète")
 
         form.addRow("Recherche élève :", self.search_input)
         layout.addLayout(form)
+
+        filters_layout.addWidget(QLabel("Établissement"))
+        filters_layout.addWidget(self.establishment_filter)
+        filters_layout.addWidget(QLabel("Classe"))
+        filters_layout.addWidget(self.class_filter)
+        layout.addLayout(filters_layout)
+
+        buttons_layout.addWidget(self.details_btn)
+        buttons_layout.addStretch()
+        layout.addLayout(buttons_layout)
 
         self.students_table = QTableWidget()
         self.students_table.setColumnCount(3)
@@ -34,6 +52,29 @@ class StudentFinancePage(QWidget):
 
         layout.addWidget(QLabel("Élèves"))
         layout.addWidget(self.students_table)
+
+        self.details_card = QFrame()
+        self.details_card.setObjectName("studentFinanceDetailsCard")
+        details_layout = QFormLayout(self.details_card)
+        details_layout.setContentsMargins(12, 12, 12, 12)
+        details_layout.setVerticalSpacing(6)
+
+        self.d_student = QLabel("-")
+        self.d_matricule = QLabel("-")
+        self.d_class = QLabel("-")
+        self.d_expected = QLabel("0 FCFA")
+        self.d_discount = QLabel("0 FCFA")
+        self.d_paid = QLabel("0 FCFA")
+        self.d_remaining = QLabel("0 FCFA")
+
+        details_layout.addRow("Élève :", self.d_student)
+        details_layout.addRow("Matricule :", self.d_matricule)
+        details_layout.addRow("Classe :", self.d_class)
+        details_layout.addRow("Montant prévu :", self.d_expected)
+        details_layout.addRow("Réduction :", self.d_discount)
+        details_layout.addRow("Payé :", self.d_paid)
+        details_layout.addRow("Reste :", self.d_remaining)
+        layout.addWidget(self.details_card)
 
         self.summary_table = QTableWidget()
         self.summary_table.setColumnCount(5)
@@ -72,11 +113,48 @@ class StudentFinancePage(QWidget):
         layout.addWidget(self.payments_table)
 
         self.setLayout(layout)
+        self.setStyleSheet(
+            """
+            QLabel { color: #111827; font-weight: 600; }
+            QLineEdit {
+                background-color: white;
+                color: #111827;
+                border: 1px solid #cbd5e1;
+                border-radius: 6px;
+                padding: 6px 8px;
+                min-height: 28px;
+            }
+            QComboBox {
+                background-color: #303030;
+                color: #ffffff;
+                border: 1px solid #525252;
+                border-radius: 4px;
+                padding: 6px 10px;
+                min-height: 28px;
+            }
+            QComboBox QAbstractItemView {
+                background-color: #2b2b2b;
+                color: #ffffff;
+                selection-background-color: #2563eb;
+                selection-color: #ffffff;
+            }
+            QFrame#studentFinanceDetailsCard {
+                background: white;
+                border: 1px solid #d1d5db;
+                border-radius: 10px;
+            }
+            """
+        )
 
         self.search_input.textChanged.connect(self.load_students)
+        self.establishment_filter.currentIndexChanged.connect(self.on_establishment_changed)
+        self.class_filter.currentIndexChanged.connect(self.load_students)
+        self.details_btn.clicked.connect(self.open_details_dialog)
         self.students_table.itemSelectionChanged.connect(self.on_student_selected)
 
         self.load_current_school_year()
+        self.load_establishments()
+        self.load_classes()
         self.load_students()
 
     def load_current_school_year(self):
@@ -105,12 +183,72 @@ class StudentFinancePage(QWidget):
         finally:
             conn.close()
 
+    def load_establishments(self):
+        self.establishment_filter.clear()
+        conn = get_connection()
+        if not conn:
+            return
+        try:
+            cursor = conn.cursor()
+            if self.is_global_admin:
+                self.establishment_filter.addItem("Tous", None)
+                cursor.execute("SELECT id, name FROM establishments ORDER BY name")
+                for est_id, name in cursor.fetchall():
+                    self.establishment_filter.addItem(name, est_id)
+            else:
+                cursor.execute(
+                    "SELECT id, name FROM establishments WHERE id = %s",
+                    (self.current_user["establishment_id"],),
+                )
+                row = cursor.fetchone()
+                if row:
+                    self.establishment_filter.addItem(row[1], row[0])
+                self.establishment_filter.setEnabled(False)
+        finally:
+            conn.close()
+
+    def on_establishment_changed(self):
+        self.load_classes()
+        self.load_students()
+
+    def load_classes(self):
+        self.class_filter.clear()
+        self.class_filter.addItem("Toutes", None)
+        conn = get_connection()
+        if not conn:
+            return
+        try:
+            cursor = conn.cursor()
+            params = [self.current_school_year_id]
+            sql = """
+                SELECT DISTINCT c.id, c.name
+                FROM classes c
+                JOIN enrollments e ON e.class_id = c.id
+                JOIN students s ON s.id = e.student_id
+                WHERE e.school_year_id = %s
+            """
+            if self.is_global_admin:
+                est_id = self.establishment_filter.currentData()
+                if est_id is not None:
+                    sql += " AND s.establishment_id = %s"
+                    params.append(est_id)
+            else:
+                sql += " AND s.establishment_id = %s"
+                params.append(self.current_user["establishment_id"])
+            sql += " ORDER BY c.name"
+            cursor.execute(sql, params)
+            for class_id, name in cursor.fetchall():
+                self.class_filter.addItem(name, class_id)
+        finally:
+            conn.close()
+
     def load_students(self):
         self.students_table.setRowCount(0)
         self.summary_table.setRowCount(0)
         self.payments_table.setRowCount(0)
         self.total_remaining_label.setText("0.00")
         self.selected_student_id = None
+        self.clear_details()
 
         conn = get_connection()
         if not conn or self.current_school_year_id is None:
@@ -118,73 +256,59 @@ class StudentFinancePage(QWidget):
 
         search_text = self.search_input.text().strip()
         search_pattern = f"%{search_text}%"
+        class_id = self.class_filter.currentData()
+        establishment_id = self.establishment_filter.currentData()
 
         try:
             cursor = conn.cursor()
+            filters = [
+                "e.school_year_id = %s",
+                "s.is_active = TRUE",
+                """(
+                    s.first_name ILIKE %s
+                    OR s.last_name ILIKE %s
+                    OR s.matricule ILIKE %s
+                )""",
+            ]
+            params = [self.current_school_year_id, search_pattern, search_pattern, search_pattern]
 
-            if self.current_user["role"] == "ADMIN_GLOBAL":
-                cursor.execute(
-                    """
-                    SELECT
-                        s.id,
-                        s.last_name || ' ' || s.first_name AS student_name,
-                        c.name AS class_name
-                    FROM students s
-                    JOIN enrollments e ON e.student_id = s.id
-                    JOIN classes c ON c.id = e.class_id
-                    WHERE e.school_year_id = %s
-                      AND s.is_active = TRUE
-                      AND (
-                          s.first_name ILIKE %s
-                          OR s.last_name ILIKE %s
-                          OR s.matricule ILIKE %s
-                      )
-                    ORDER BY s.last_name, s.first_name
-                    """,
-                    (
-                        self.current_school_year_id,
-                        search_pattern,
-                        search_pattern,
-                        search_pattern
-                    )
-                )
+            if self.is_global_admin:
+                if establishment_id is not None:
+                    filters.append("s.establishment_id = %s")
+                    params.append(establishment_id)
             else:
-                cursor.execute(
-                    """
-                    SELECT
-                        s.id,
-                        s.last_name || ' ' || s.first_name AS student_name,
-                        c.name AS class_name
-                    FROM students s
-                    JOIN enrollments e ON e.student_id = s.id
-                    JOIN classes c ON c.id = e.class_id
-                    WHERE e.school_year_id = %s
-                      AND s.establishment_id = %s
-                      AND s.is_active = TRUE
-                      AND (
-                          s.first_name ILIKE %s
-                          OR s.last_name ILIKE %s
-                          OR s.matricule ILIKE %s
-                      )
-                    ORDER BY s.last_name, s.first_name
-                    """,
-                    (
-                        self.current_school_year_id,
-                        self.current_user["establishment_id"],
-                        search_pattern,
-                        search_pattern,
-                        search_pattern
-                    )
-                )
+                filters.append("s.establishment_id = %s")
+                params.append(self.current_user["establishment_id"])
+
+            if class_id is not None:
+                filters.append("c.id = %s")
+                params.append(class_id)
+
+            where_sql = " AND ".join(filters)
+            cursor.execute(
+                f"""
+                SELECT
+                    s.id,
+                    s.last_name || ' ' || s.first_name AS student_name,
+                    c.name AS class_name
+                FROM students s
+                JOIN enrollments e ON e.student_id = s.id
+                JOIN classes c ON c.id = e.class_id
+                WHERE {where_sql}
+                ORDER BY s.last_name, s.first_name
+                """,
+                params
+            )
 
             rows = cursor.fetchall()
 
             self.students_table.setRowCount(len(rows))
 
             for i, (student_id, student_name, class_name) in enumerate(rows):
-                self.students_table.setItem(i, 0, QTableWidgetItem(str(student_id)))
-                self.students_table.setItem(i, 1, QTableWidgetItem(student_name))
-                self.students_table.setItem(i, 2, QTableWidgetItem(class_name))
+                for j, value in enumerate((student_id, student_name, class_name)):
+                    item = QTableWidgetItem("" if value is None else str(value))
+                    item.setFlags(item.flags() ^ Qt.ItemFlag.ItemIsEditable)
+                    self.students_table.setItem(i, j, item)
 
             self.students_table.resizeColumnsToContents()
 
@@ -204,6 +328,7 @@ class StudentFinancePage(QWidget):
             self.summary_table.setRowCount(0)
             self.payments_table.setRowCount(0)
             self.total_remaining_label.setText("0.00")
+            self.clear_details()
             return
 
         student_id_item = self.students_table.item(selected_row, 0)
@@ -211,8 +336,55 @@ class StudentFinancePage(QWidget):
             return
 
         self.selected_student_id = int(student_id_item.text())
+        self.load_student_details()
         self.load_financial_summary()
         self.load_payment_history()
+
+    def clear_details(self):
+        self.d_student.setText("-")
+        self.d_matricule.setText("-")
+        self.d_class.setText("-")
+        self.d_expected.setText("0 FCFA")
+        self.d_discount.setText("0 FCFA")
+        self.d_paid.setText("0 FCFA")
+        self.d_remaining.setText("0 FCFA")
+
+    def load_student_details(self):
+        if self.selected_student_id is None:
+            self.clear_details()
+            return
+
+        conn = get_connection()
+        if not conn:
+            self.clear_details()
+            return
+
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT
+                    s.last_name || ' ' || s.first_name AS student_name,
+                    COALESCE(s.matricule, '-'),
+                    COALESCE(c.name, '-')
+                FROM students s
+                LEFT JOIN enrollments e
+                    ON e.student_id = s.id
+                   AND e.school_year_id = %s
+                LEFT JOIN classes c ON c.id = e.class_id
+                WHERE s.id = %s
+                """,
+                (self.current_school_year_id, self.selected_student_id),
+            )
+            row = cursor.fetchone()
+            if not row:
+                self.clear_details()
+                return
+            self.d_student.setText(row[0] or "-")
+            self.d_matricule.setText(row[1] or "-")
+            self.d_class.setText(row[2] or "-")
+        finally:
+            conn.close()
 
     def load_financial_summary(self):
         self.summary_table.setRowCount(0)
@@ -266,6 +438,9 @@ class StudentFinancePage(QWidget):
 
             self.summary_table.setRowCount(len(rows))
             total_remaining = 0.0
+            total_expected = 0.0
+            total_discount = 0.0
+            total_paid = 0.0
 
             for i, row in enumerate(rows):
                 fee_name, expected, discount, paid = row
@@ -273,9 +448,12 @@ class StudentFinancePage(QWidget):
                 expected = float(expected or 0)
                 discount = float(discount or 0)
                 paid = float(paid or 0)
-                remaining = (expected - discount) - paid
+                remaining = max((expected - discount) - paid, 0)
 
                 total_remaining += remaining
+                total_expected += expected
+                total_discount += discount
+                total_paid += paid
 
                 values = [
                     fee_name,
@@ -286,9 +464,15 @@ class StudentFinancePage(QWidget):
                 ]
 
                 for j, value in enumerate(values):
-                    self.summary_table.setItem(i, j, QTableWidgetItem(value))
+                    item = QTableWidgetItem(value)
+                    item.setFlags(item.flags() ^ Qt.ItemFlag.ItemIsEditable)
+                    self.summary_table.setItem(i, j, item)
 
             self.total_remaining_label.setText(f"{total_remaining:.2f}")
+            self.d_expected.setText(f"{total_expected:,.0f} FCFA")
+            self.d_discount.setText(f"{total_discount:,.0f} FCFA")
+            self.d_paid.setText(f"{total_paid:,.0f} FCFA")
+            self.d_remaining.setText(f"{total_remaining:,.0f} FCFA")
 
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Chargement résumé financier impossible : {e}")
@@ -342,9 +526,24 @@ class StudentFinancePage(QWidget):
                 ]
 
                 for j, value in enumerate(values):
-                    self.payments_table.setItem(i, j, QTableWidgetItem(value))
+                    item = QTableWidgetItem(value)
+                    item.setFlags(item.flags() ^ Qt.ItemFlag.ItemIsEditable)
+                    self.payments_table.setItem(i, j, item)
 
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Chargement historique paiements impossible : {e}")
         finally:
             conn.close()
+
+    def open_details_dialog(self):
+        if self.selected_student_id is None:
+            QMessageBox.warning(self, "Validation", "Sélectionnez un élève")
+            return
+
+        dialog = StudentFinanceDetailsDialog(
+            student_id=self.selected_student_id,
+            current_user=self.current_user,
+            current_school_year_id=self.current_school_year_id,
+            parent=self,
+        )
+        dialog.exec()

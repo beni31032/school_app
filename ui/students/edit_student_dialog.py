@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QFormLayout, QLineEdit, QComboBox,
-    QPushButton, QMessageBox, QDateEdit, QLabel
+    QPushButton, QMessageBox, QDateEdit, QLabel, QHBoxLayout
 )
 from PyQt6.QtCore import QDate
 
@@ -31,6 +31,7 @@ class EditStudentDialog(QDialog):
         self.birth_date_input = QDateEdit()
         self.birth_date_input.setCalendarPopup(True)
         self.birth_date_input.setDate(QDate.currentDate())
+        self.birth_date_input.setDisplayFormat("yyyy-MM-dd")
 
         self.gender_input = QComboBox()
         self.gender_input.addItems(["Masculin", "Féminin"])
@@ -52,14 +53,48 @@ class EditStudentDialog(QDialog):
         self.form_layout.addRow("Établissement :", self.establishment_label)
         self.form_layout.addRow("Classe :", self.class_input)
 
+        btn_layout = QHBoxLayout()
+        btn_layout.addWidget(self.save_btn)
+        btn_layout.addWidget(self.cancel_btn)
+
         self.layout.addLayout(self.form_layout)
-        self.layout.addWidget(self.save_btn)
-        self.layout.addWidget(self.cancel_btn)
+        self.layout.addLayout(btn_layout)
 
         self.setLayout(self.layout)
+        self.apply_local_styles()
 
         self.load_current_school_year()
         self.load_student()
+
+    def apply_local_styles(self):
+        self.setStyleSheet(
+            """
+            QDialog { background-color: #f8fafc; }
+            QLabel {
+                color: #111827;
+                font-weight: 600;
+                min-width: 130px;
+            }
+            QLineEdit, QDateEdit, QComboBox {
+                background-color: white;
+                color: #111827;
+                border: 1px solid #cbd5e1;
+                border-radius: 6px;
+                padding: 6px 8px;
+                min-height: 28px;
+            }
+            QPushButton {
+                background-color: #2563eb;
+                color: white;
+                border: none;
+                border-radius: 7px;
+                padding: 8px 12px;
+                font-weight: 700;
+            }
+            QPushButton:hover { background-color: #1d4ed8; }
+            QPushButton:pressed { background-color: #1e40af; }
+            """
+        )
 
     def load_current_school_year(self):
         conn = get_connection()

@@ -11,6 +11,8 @@ from PyQt6.QtWidgets import (
 )
 
 from database.connection import get_connection
+from utils.subject_service import ensure_subject_schema
+from utils.teacher_service import ensure_teacher_schema
 
 
 class EditTimetableDialog(QDialog):
@@ -19,6 +21,8 @@ class EditTimetableDialog(QDialog):
         self.timetable_id = int(timetable_id)
         self.current_user = current_user
         self.is_global_admin = self.current_user["role"] == "ADMIN_GLOBAL"
+        ensure_teacher_schema()
+        ensure_subject_schema()
 
         self.setWindowTitle("Modifier emploi du temps")
         self.setFixedWidth(460)
@@ -55,11 +59,43 @@ class EditTimetableDialog(QDialog):
         layout.addLayout(form)
         layout.addLayout(btns)
         self.setLayout(layout)
+        self.apply_local_styles()
 
         self.save_btn.clicked.connect(self.update_item)
         self.cancel_btn.clicked.connect(self.reject)
+        self.class_input.currentIndexChanged.connect(self.load_subjects_for_selected_class)
 
         self.load_data()
+
+    def apply_local_styles(self):
+        self.setStyleSheet(
+            """
+            QDialog { background-color: #f8fafc; }
+            QLabel {
+                color: #111827;
+                font-weight: 600;
+                min-width: 135px;
+            }
+            QComboBox, QTimeEdit {
+                background-color: white;
+                color: #111827;
+                border: 1px solid #cbd5e1;
+                border-radius: 6px;
+                padding: 6px 8px;
+                min-height: 28px;
+            }
+            QPushButton {
+                background-color: #2563eb;
+                color: white;
+                border: none;
+                border-radius: 7px;
+                padding: 8px 12px;
+                font-weight: 700;
+            }
+            QPushButton:hover { background-color: #1d4ed8; }
+            QPushButton:pressed { background-color: #1e40af; }
+            """
+        )
 
     def load_data(self):
         conn = get_connection()
@@ -107,15 +143,17 @@ class EditTimetableDialog(QDialog):
                 self.class_input.addItem(name, c_id)
             self._select_combo(self.class_input, class_id)
 
-            self.subject_input.clear()
-            cur.execute("SELECT id, name FROM subjects WHERE establishment_id=%s ORDER BY name", (est_id,))
-            for s_id, name in cur.fetchall():
-                self.subject_input.addItem(name, s_id)
-            self._select_combo(self.subject_input, subject_id)
+            self.load_subjects_for_selected_class(selected_subject_id=subject_id)
 
             self.teacher_input.clear()
             cur.execute(
-                "SELECT id, last_name || ' ' || first_name FROM teachers WHERE establishment_id=%s ORDER BY last_name, first_name",
+                """
+                SELECT id, last_name || ' ' || first_name
+                FROM teachers
+                WHERE establishment_id=%s
+                  AND COALESCE(is_active, TRUE) = TRUE
+                ORDER BY last_name, first_name
+                """,
                 (est_id,),
             )
             for t_id, name in cur.fetchall():
@@ -138,6 +176,39 @@ class EditTimetableDialog(QDialog):
         idx = self.day_input.findText(day)
         if idx >= 0:
             self.day_input.setCurrentIndex(idx)
+
+    def load_subjects_for_selected_class(self, selected_subject_id=None):
+        self.subject_input.clear()
+        class_id = self.class_input.currentData()
+        if class_id is None:
+            return
+
+        conn = get_connection()
+        if not conn:
+            return
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT s.id, s.name
+                FROM class_subjects cs
+                JOIN subjects s ON s.id = cs.subject_id
+                WHERE cs.class_id = %s
+                ORDER BY s.name
+                """,
+                (class_id,),
+            )
+            rows = cur.fetchall()
+            selected_index = 0
+            for index, (subject_id, name) in enumerate(rows):
+                self.subject_input.addItem(name, subject_id)
+                if selected_subject_id is not None and subject_id == selected_subject_id:
+                    selected_index = index
+
+            if self.subject_input.count() > 0:
+                self.subject_input.setCurrentIndex(selected_index)
+        finally:
+            conn.close()
 
     def update_item(self):
         school_year_id = self.school_year_input.currentData()
@@ -188,6 +259,21 @@ class EditTimetableDialog(QDialog):
             )
             if cur.fetchone():
                 QMessageBox.warning(self, "Validation", "Conflit d'horaire pour cette classe.")
+                return
+
+            cur.execute(
+                """
+                SELECT 1
+                FROM timetables
+                WHERE id <> %s
+                  AND teacher_id=%s AND school_year_id=%s AND day_of_week=%s
+                  AND NOT (end_time <= %s::time OR start_time >= %s::time)
+                LIMIT 1
+                """,
+                (self.timetable_id, teacher_id, school_year_id, day, start_time, end_time),
+            )
+            if cur.fetchone():
+                QMessageBox.warning(self, "Validation", "Conflit d'horaire pour cet enseignant.")
                 return
 
             if self.is_global_admin:

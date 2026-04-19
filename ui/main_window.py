@@ -3,7 +3,7 @@
 
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout,
-    QVBoxLayout, QPushButton, QLabel, QStackedWidget
+    QVBoxLayout, QPushButton, QLabel, QStackedWidget, QScrollArea, QFrame
 )
 
 from ui.dashboard.dashboard_page import DashboardPage
@@ -32,6 +32,7 @@ from ui.grades.lycee_grades_page import LyceeGradesPage
 from ui.bulletins.primary_bulletins_page import PrimaryBulletinsPage
 from ui.bulletins.college_bulletins_page import CollegeBulletinsPage
 from ui.bulletins.lycee_bulletins_page import LyceeBulletinsPage
+from ui.settings.settings_page import SettingsPage
 
 
 class MainWindow(QMainWindow):
@@ -40,6 +41,17 @@ class MainWindow(QMainWindow):
 
         self.current_user = current_user
         self.menu_buttons = []
+        self.section_toggles = {}
+        self.section_contents = {}
+        self.button_sections = {}
+        self.section_colors = {
+            "Vue générale": "#93c5fd",
+            "Administration": "#86efac",
+            "Suivi et analyses": "#fcd34d",
+            "Finance": "#fca5a5",
+            "Pédagogie": "#c4b5fd",
+            "Rapports": "#67e8f9",
+        }
 
         self.setWindowTitle("Système de Gestion Scolaire")
         self.resize(1200, 750)
@@ -61,6 +73,40 @@ class MainWindow(QMainWindow):
                 padding: 10px;
                 border-bottom: 1px solid #1f2937;
                 margin-bottom: 10px;
+            }
+
+            QPushButton#sectionToggle {
+                background-color: transparent;
+                border: none;
+                padding: 8px 10px 4px 10px;
+                text-align: left;
+                border-radius: 6px;
+                font-size: 11px;
+                font-weight: 800;
+            }
+
+            QPushButton#sectionToggle:hover {
+                background-color: #172033;
+            }
+
+            QWidget#sectionContent {
+                background-color: transparent;
+            }
+
+            QFrame#sectionDivider {
+                background-color: #1f2937;
+                min-height: 1px;
+                max-height: 1px;
+                border: none;
+                margin: 0 8px 4px 8px;
+            }
+
+            QFrame#footerDivider {
+                background-color: #1f2937;
+                min-height: 1px;
+                max-height: 1px;
+                border: none;
+                margin: 6px 10px;
             }
 
             QPushButton {
@@ -87,8 +133,34 @@ class MainWindow(QMainWindow):
                 background-color: #1d4ed8;
             }
 
+            QPushButton#footerButton {
+                background-color: transparent;
+                color: #cbd5e1;
+                border: 1px solid #243041;
+                padding: 10px 14px;
+                text-align: left;
+                border-radius: 10px;
+                font-size: 13px;
+                margin: 6px 10px 10px 10px;
+            }
+
+            QPushButton#footerButton:hover {
+                background-color: #172033;
+                border: 1px solid #334155;
+                color: white;
+            }
+
             QLabel {
                 color: white;
+            }
+
+            QScrollArea {
+                border: none;
+                background: transparent;
+            }
+
+            QScrollArea > QWidget > QWidget {
+                background: transparent;
             }
 
             QStackedWidget {
@@ -135,8 +207,17 @@ class MainWindow(QMainWindow):
         # =========================
         self.menu_widget = QWidget()
         self.menu_widget.setObjectName("sidebar")
-        self.menu_widget.setFixedWidth(240)
+        self.menu_widget.setFixedWidth(280)
 
+        menu_wrapper_layout = QVBoxLayout()
+        menu_wrapper_layout.setContentsMargins(0, 0, 0, 0)
+        menu_wrapper_layout.setSpacing(0)
+
+        self.menu_scroll = QScrollArea()
+        self.menu_scroll.setWidgetResizable(True)
+        self.menu_scroll.setFrameShape(QFrame.Shape.NoFrame)
+
+        self.menu_content = QWidget()
         menu_layout = QVBoxLayout()
         menu_layout.setContentsMargins(10, 12, 10, 12)
         menu_layout.setSpacing(6)
@@ -196,32 +277,76 @@ class MainWindow(QMainWindow):
         self.financial_reports_btn = self.create_menu_button("Rapports", "📈")
 
         menu_layout.addWidget(self.user_label)
-        menu_layout.addWidget(self.dashboard_btn)
-        menu_layout.addWidget(self.students_btn)
-        menu_layout.addWidget(self.teachers_btn)
-        menu_layout.addWidget(self.staff_btn)
-        menu_layout.addWidget(self.classes_btn)
-        menu_layout.addWidget(self.subjects_btn)
-        menu_layout.addWidget(self.class_subjects_btn)
-        menu_layout.addWidget(self.teacher_assignments_btn)
-        menu_layout.addWidget(self.timetables_btn)
-        menu_layout.addWidget(self.lists_btn)
-        menu_layout.addWidget(self.statistics_btn)
-        menu_layout.addWidget(self.fees_btn)
-        menu_layout.addWidget(self.class_fees_btn)
-        menu_layout.addWidget(self.discounts_btn)
-        menu_layout.addWidget(self.expenses_btn)
-        menu_layout.addWidget(self.salaries_btn)
-        menu_layout.addWidget(self.payments_btn)
-        menu_layout.addWidget(self.finance_btn)
-        menu_layout.addWidget(self.grades_btn)
-        menu_layout.addWidget(self.grades_submenu)
-        menu_layout.addWidget(self.bulletins_btn)
-        menu_layout.addWidget(self.bulletins_submenu)
-        menu_layout.addWidget(self.financial_reports_btn)
+
+        self.add_section(menu_layout, "Vue générale", [self.dashboard_btn], expanded=True)
+        self.add_section(
+            menu_layout,
+            "Administration",
+            [
+                self.students_btn,
+                self.teachers_btn,
+                self.staff_btn,
+                self.classes_btn,
+                self.subjects_btn,
+                self.class_subjects_btn,
+                self.teacher_assignments_btn,
+                self.timetables_btn,
+            ],
+            expanded=False,
+        )
+        self.add_section(
+            menu_layout,
+            "Suivi et analyses",
+            [self.lists_btn, self.statistics_btn],
+            expanded=False,
+        )
+        self.add_section(
+            menu_layout,
+            "Finance",
+            [
+                self.fees_btn,
+                self.class_fees_btn,
+                self.discounts_btn,
+                self.expenses_btn,
+                self.salaries_btn,
+                self.payments_btn,
+                self.finance_btn,
+            ],
+            expanded=False,
+        )
+        self.add_section(
+            menu_layout,
+            "Pédagogie",
+            [
+                self.grades_btn,
+                self.grades_submenu,
+                self.bulletins_btn,
+                self.bulletins_submenu,
+            ],
+            expanded=False,
+        )
+        self.add_section(
+            menu_layout,
+            "Rapports",
+            [self.financial_reports_btn],
+            expanded=False,
+        )
         menu_layout.addStretch()
 
-        self.menu_widget.setLayout(menu_layout)
+        self.menu_content.setLayout(menu_layout)
+        self.menu_scroll.setWidget(self.menu_content)
+        menu_wrapper_layout.addWidget(self.menu_scroll)
+
+        self.footer_divider = QFrame()
+        self.footer_divider.setObjectName("footerDivider")
+        self.settings_btn = QPushButton("⚙  Paramètres")
+        self.settings_btn.setObjectName("footerButton")
+        self.settings_btn.setCheckable(True)
+        self.menu_buttons.append(self.settings_btn)
+
+        menu_wrapper_layout.addWidget(self.footer_divider)
+        menu_wrapper_layout.addWidget(self.settings_btn)
+        self.menu_widget.setLayout(menu_wrapper_layout)
 
         # =========================
         # PAGES
@@ -248,6 +373,7 @@ class MainWindow(QMainWindow):
         self.page_expenses = ExpensesPage(self.current_user)
         self.page_salaries = SalariesPage(self.current_user)
         self.page_financial_reports = FinancialReportsPage(self.current_user)
+        self.page_settings = SettingsPage(self.current_user)
         
         #Grades
         self.page_primary_grades = PrimaryGradesPage(current_user=self.current_user)
@@ -284,6 +410,7 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.page_primary_grades)
         self.stack.addWidget(self.page_college_grades)
         self.stack.addWidget(self.page_lycee_grades)
+        self.stack.addWidget(self.page_settings)
 
         main_layout.addWidget(self.menu_widget)
         main_layout.addWidget(self.stack)
@@ -374,6 +501,9 @@ class MainWindow(QMainWindow):
         self.lycee_bulletins_btn.clicked.connect(
             lambda: self.switch_page(self.lycee_bulletins_btn, self.page_lycee_bulletins)
         )
+        self.settings_btn.clicked.connect(
+            lambda: self.switch_page(self.settings_btn, self.page_settings)
+        )
         
         # Page par défaut
         self.switch_page(self.dashboard_btn, self.page_home)
@@ -384,12 +514,66 @@ class MainWindow(QMainWindow):
         self.menu_buttons.append(btn)
         return btn
 
+    def add_section(self, parent_layout, title, widgets, expanded=True):
+        toggle_btn = QPushButton()
+        toggle_btn.setObjectName("sectionToggle")
+        toggle_btn.setCheckable(True)
+        toggle_btn.setChecked(expanded)
+
+        content = QWidget()
+        content.setObjectName("sectionContent")
+        content_layout = QVBoxLayout()
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(4)
+
+        for widget in widgets:
+            content_layout.addWidget(widget)
+            if widget in self.menu_buttons:
+                self.button_sections[widget] = title
+
+        content.setLayout(content_layout)
+        content.setVisible(expanded)
+
+        self.section_toggles[title] = toggle_btn
+        self.section_contents[title] = content
+        self.update_section_toggle_text(title)
+        toggle_btn.clicked.connect(lambda checked=False, section=title: self.toggle_section(section))
+
+        parent_layout.addWidget(toggle_btn)
+        parent_layout.addWidget(content)
+
+    def update_section_toggle_text(self, title):
+        is_open = self.section_contents[title].isVisible()
+        arrow = "▾" if is_open else "▸"
+        self.section_toggles[title].setText(f"{arrow}  {title.upper()}")
+        color = self.section_colors.get(title, "#93c5fd")
+        bg = color + "22" if is_open else "transparent"
+        border = color + "44" if is_open else "transparent"
+        self.section_toggles[title].setStyleSheet(f"""
+            QPushButton#sectionToggle {{
+                background-color: {bg};
+                color: {color};
+                border: 1px solid {border};
+                padding: 8px 10px 4px 10px;
+                text-align: left;
+                border-radius: 6px;
+                font-size: 11px;
+                font-weight: 800;
+            }}
+            QPushButton#sectionToggle:hover {{
+                background-color: #172033;
+            }}
+        """)
+
     def set_active_button(self, active_button):
         for btn in self.menu_buttons:
             btn.setChecked(False)
         active_button.setChecked(True)
 
     def switch_page(self, button, page):
+        section = self.button_sections.get(button)
+        if section:
+            self.expand_only_section(section)
         self.set_active_button(button)
         self.stack.setCurrentWidget(page)
         
@@ -427,3 +611,19 @@ class MainWindow(QMainWindow):
     def toggle_bulletins_submenu(self):
         is_visible = self.bulletins_submenu.isVisible()
         self.bulletins_submenu.setVisible(not is_visible)
+
+    def toggle_section(self, title):
+        is_visible = self.section_contents[title].isVisible()
+        if is_visible:
+            self.section_contents[title].setVisible(False)
+            self.section_toggles[title].setChecked(False)
+            self.update_section_toggle_text(title)
+            return
+        self.expand_only_section(title)
+
+    def expand_only_section(self, active_title):
+        for title, content in self.section_contents.items():
+            is_active = title == active_title
+            content.setVisible(is_active)
+            self.section_toggles[title].setChecked(is_active)
+            self.update_section_toggle_text(title)

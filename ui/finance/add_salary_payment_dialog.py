@@ -10,10 +10,12 @@ from PyQt6.QtWidgets import (
     QTextEdit,
     QVBoxLayout,
     QDoubleSpinBox,
+    QHBoxLayout,
 )
 
 from database.connection import get_connection
 from utils.salary_service import ensure_salary_table
+from utils.teacher_service import ensure_teacher_schema
 
 
 class AddSalaryPaymentDialog(QDialog):
@@ -24,6 +26,7 @@ class AddSalaryPaymentDialog(QDialog):
         self.is_global_admin = self.current_user["role"] == "ADMIN_GLOBAL"
 
         ensure_salary_table()
+        ensure_teacher_schema()
 
         self.setWindowTitle("Ajouter paiement salaire")
         self.setFixedWidth(520)
@@ -39,7 +42,7 @@ class AddSalaryPaymentDialog(QDialog):
         self.month_input = QComboBox()
         self.year_input = QComboBox()
         self.amount_input = QDoubleSpinBox(); self.amount_input.setRange(0, 999999999); self.amount_input.setDecimals(2)
-        self.date_input = QDateEdit(); self.date_input.setCalendarPopup(True); self.date_input.setDate(QDate.currentDate())
+        self.date_input = QDateEdit(); self.date_input.setCalendarPopup(True); self.date_input.setDate(QDate.currentDate()); self.date_input.setDisplayFormat("yyyy-MM-dd")
         self.method_input = QLineEdit(); self.method_input.setPlaceholderText("Espèces / Virement / ...")
         self.reference_input = QLineEdit(); self.reference_input.setPlaceholderText("Référence optionnelle")
         self.notes_input = QTextEdit(); self.notes_input.setPlaceholderText("Notes optionnelles"); self.notes_input.setFixedHeight(80)
@@ -65,11 +68,44 @@ class AddSalaryPaymentDialog(QDialog):
 
         self.save_btn = QPushButton("Enregistrer")
         self.cancel_btn = QPushButton("Annuler")
+        actions = QHBoxLayout()
+        actions.addWidget(self.save_btn)
+        actions.addWidget(self.cancel_btn)
 
         layout.addLayout(form)
-        layout.addWidget(self.save_btn)
-        layout.addWidget(self.cancel_btn)
+        layout.addLayout(actions)
         self.setLayout(layout)
+
+        self.setStyleSheet(
+            """
+            QDialog { background-color: #f8fafc; }
+            QLabel { color: #111827; font-weight: 600; }
+            QLineEdit, QTextEdit, QDateEdit, QComboBox, QDoubleSpinBox {
+                background-color: white;
+                color: #111827;
+                border: 1px solid #cbd5e1;
+                border-radius: 6px;
+                padding: 6px 8px;
+            }
+            QPushButton {
+                min-height: 34px;
+                border-radius: 8px;
+                font-weight: 700;
+                padding: 6px 12px;
+            }
+            QPushButton:first-of-type {
+                background-color: #2563eb;
+                color: white;
+                border: none;
+            }
+            QPushButton:first-of-type:hover { background-color: #1d4ed8; }
+            QPushButton:last-of-type {
+                background-color: white;
+                color: #111827;
+                border: 1px solid #cbd5e1;
+            }
+            """
+        )
 
         self.establishment_input.currentIndexChanged.connect(self.load_people)
         self.person_type_input.currentIndexChanged.connect(self.load_people)

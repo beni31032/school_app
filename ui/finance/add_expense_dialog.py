@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QTextEdit,
     QVBoxLayout,
+    QHBoxLayout,
 )
 
 from database.connection import get_connection
@@ -33,6 +34,7 @@ class AddExpenseDialog(QDialog):
         self.date_input = QDateEdit()
         self.date_input.setCalendarPopup(True)
         self.date_input.setDate(QDate.currentDate())
+        self.date_input.setDisplayFormat("yyyy-MM-dd")
         self.description_input = QTextEdit()
         self.description_input.setPlaceholderText("Description optionnelle")
         self.description_input.setFixedHeight(80)
@@ -44,11 +46,47 @@ class AddExpenseDialog(QDialog):
 
         self.save_btn = QPushButton("Enregistrer")
         self.cancel_btn = QPushButton("Annuler")
+        actions = QHBoxLayout()
+        actions.addWidget(self.save_btn)
+        actions.addWidget(self.cancel_btn)
 
         layout.addLayout(form)
-        layout.addWidget(self.save_btn)
-        layout.addWidget(self.cancel_btn)
+        layout.addLayout(actions)
         self.setLayout(layout)
+
+        self.setStyleSheet(
+            """
+            QDialog { background-color: #f8fafc; }
+            QLabel {
+                color: #111827;
+                font-weight: 600;
+            }
+            QLineEdit, QTextEdit, QDateEdit {
+                background-color: white;
+                color: #111827;
+                border: 1px solid #cbd5e1;
+                border-radius: 6px;
+                padding: 6px 8px;
+            }
+            QPushButton {
+                min-height: 34px;
+                border-radius: 8px;
+                font-weight: 700;
+                padding: 6px 12px;
+            }
+            QPushButton:first-of-type {
+                background-color: #2563eb;
+                color: white;
+                border: none;
+            }
+            QPushButton:first-of-type:hover { background-color: #1d4ed8; }
+            QPushButton:last-of-type {
+                background-color: white;
+                color: #111827;
+                border: 1px solid #cbd5e1;
+            }
+            """
+        )
 
         self.save_btn.clicked.connect(self.save_expense)
         self.cancel_btn.clicked.connect(self.reject)

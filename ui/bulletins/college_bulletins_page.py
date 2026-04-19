@@ -14,7 +14,11 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
     QHeaderView,
+    QLineEdit,
+    QLabel,
+    QFrame,
 )
+from PyQt6.QtCore import Qt
 
 from database.connection import get_connection
 from utils.college_bulletin_generator import generate_college_bulletin
@@ -33,30 +37,69 @@ class CollegeBulletinsPage(QWidget):
 
         self.class_input = QComboBox()
         self.term_input = QComboBox()
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Rechercher par matricule, nom ou prénom")
 
         self.load_btn = QPushButton("Charger")
+        self.preview_btn = QPushButton("Aperçu PDF")
         self.print_one_btn = QPushButton("Imprimer l'élève sélectionné")
         self.print_all_btn = QPushButton("Imprimer toute la classe")
 
         self.table = QTableWidget()
         setup_table(self.table, stretch=True)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+
+        self.summary_card = QFrame()
+        self.summary_card.setObjectName("bulletinsSummaryCard")
+        summary_layout = QFormLayout(self.summary_card)
+        summary_layout.setContentsMargins(12, 12, 12, 12)
+        summary_layout.setVerticalSpacing(6)
+        self.info_class = QLabel("-")
+        self.info_term = QLabel("-")
+        self.info_students = QLabel("0")
+        summary_layout.addRow("Classe :", self.info_class)
+        summary_layout.addRow("Trimestre :", self.info_term)
+        summary_layout.addRow("Élèves chargés :", self.info_students)
 
         self.form_layout.addRow("Classe :", self.class_input)
         self.form_layout.addRow("Trimestre :", self.term_input)
+        self.form_layout.addRow("Recherche :", self.search_input)
 
         self.buttons_layout.addWidget(self.load_btn)
+        self.buttons_layout.addWidget(self.preview_btn)
         self.buttons_layout.addWidget(self.print_one_btn)
         self.buttons_layout.addWidget(self.print_all_btn)
 
         self.layout.addLayout(self.form_layout)
         self.layout.addLayout(self.buttons_layout)
+        self.layout.addWidget(self.summary_card)
         self.layout.addWidget(self.table)
         self.setLayout(self.layout)
+        self.setStyleSheet(
+            """
+            QLabel { color: #111827; font-weight: 600; }
+            QLineEdit {
+                background-color: white;
+                color: #111827;
+                border: 1px solid #cbd5e1;
+                border-radius: 6px;
+                padding: 6px 8px;
+                min-height: 28px;
+            }
+            QFrame#bulletinsSummaryCard {
+                background: white;
+                border: 1px solid #d1d5db;
+                border-radius: 10px;
+            }
+            """
+        )
 
         self.load_btn.clicked.connect(self.load_students)
+        self.preview_btn.clicked.connect(self.preview_bulletin)
         self.print_one_btn.clicked.connect(self.print_bulletin)
         self.print_all_btn.clicked.connect(self.print_all_bulletins)
+        self.search_input.textChanged.connect(self.load_students)
 
         self.load_classes()
         self.load_terms()
@@ -166,9 +209,20 @@ class CollegeBulletinsPage(QWidget):
                 WHERE e.class_id = %s
                   AND e.school_year_id = %s
                   AND s.is_active = TRUE
+                  AND (
+                      s.matricule ILIKE %s
+                      OR s.first_name ILIKE %s
+                      OR s.last_name ILIKE %s
+                  )
                 ORDER BY s.last_name, s.first_name
                 """,
-                (class_id, school_year_id)
+                (
+                    class_id,
+                    school_year_id,
+                    f"%{self.search_input.text().strip()}%",
+                    f"%{self.search_input.text().strip()}%",
+                    f"%{self.search_input.text().strip()}%",
+                )
             )
             rows = cursor.fetchall()
 
@@ -178,15 +232,25 @@ class CollegeBulletinsPage(QWidget):
             self.table.setColumnHidden(0, True)
 
             for i, (student_id, matricule, student_name) in enumerate(rows):
-                self.table.setItem(i, 0, QTableWidgetItem(str(student_id)))
-                self.table.setItem(i, 1, QTableWidgetItem("" if matricule is None else str(matricule)))
-                self.table.setItem(i, 2, QTableWidgetItem(student_name))
+                values = (str(student_id), "" if matricule is None else str(matricule), student_name)
+                for j, value in enumerate(values):
+                    item = QTableWidgetItem(value)
+                    item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                    self.table.setItem(i, j, item)
 
             self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+            self.info_class.setText(self.class_input.currentText() or "-")
+            self.info_term.setText(self.term_input.currentText() or "-")
+            self.info_students.setText(str(len(rows)))
+            if rows:
+                self.table.selectRow(0)
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Chargement élèves impossible : {e}")
         finally:
             conn.close()
+
+    def preview_bulletin(self):
+        self.print_bulletin()
 
     def print_bulletin(self):
         selected_row = self.table.currentRow()

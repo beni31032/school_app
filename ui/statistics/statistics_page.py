@@ -53,10 +53,12 @@ class StatCard(QFrame):
 
 
 class SimpleBarChart(QFrame):
-    def __init__(self, title: str, color: str = "#2563eb"):
+    def __init__(self, title: str, color: str = "#2563eb", value_suffix: str = "", precision: int = 0):
         super().__init__()
         self.title = title
         self.bar_color = QColor(color)
+        self.value_suffix = value_suffix
+        self.precision = precision
         self.labels = []
         self.values = []
         self.setMinimumHeight(260)
@@ -104,8 +106,12 @@ class SimpleBarChart(QFrame):
 
             painter.setPen(QColor("#1f2937"))
             short_label = str(self.labels[i])[:8]
+            if self.precision > 0:
+                value_text = f"{value:.{self.precision}f}{self.value_suffix}"
+            else:
+                value_text = f"{value:,.0f}{self.value_suffix}"
             painter.drawText(x, chart_rect.bottom() + 14, bar_width, 12, Qt.AlignmentFlag.AlignCenter, short_label)
-            painter.drawText(x, bar_top - 14, bar_width, 12, Qt.AlignmentFlag.AlignCenter, f"{value:,.0f}")
+            painter.drawText(x, bar_top - 14, bar_width, 12, Qt.AlignmentFlag.AlignCenter, value_text)
             x += bar_width + spacing
 
 
@@ -154,6 +160,8 @@ class StatisticsPage(QWidget):
         self.payments_month_card = StatCard("Encaissement du mois")
         self.expenses_month_card = StatCard("Dépenses du mois")
         self.net_month_card = StatCard("Solde net du mois")
+        self.recovery_rate_card = StatCard("Taux de recouvrement global")
+        self.success_rate_card = StatCard("Taux de réussite global")
 
         self.cards_grid.addWidget(self.students_card, 0, 0)
         self.cards_grid.addWidget(self.teachers_card, 0, 1)
@@ -161,9 +169,11 @@ class StatisticsPage(QWidget):
         self.cards_grid.addWidget(self.payments_month_card, 1, 0)
         self.cards_grid.addWidget(self.expenses_month_card, 1, 1)
         self.cards_grid.addWidget(self.net_month_card, 1, 2)
+        self.cards_grid.addWidget(self.recovery_rate_card, 2, 0)
+        self.cards_grid.addWidget(self.success_rate_card, 2, 1)
 
         self.levels_label = QLabel("Synthèse par niveau")
-        self.levels_chart = SimpleBarChart("Taux de recouvrement par niveau (%)", "#0ea5e9")
+        self.levels_chart = SimpleBarChart("Taux de recouvrement par niveau (%)", "#0ea5e9", "%", 1)
         self.levels_table = QTableWidget()
         self.levels_table.setColumnCount(5)
         self.levels_table.setHorizontalHeaderLabels(["Niveau", "Élèves", "Encaissement", "Reste à payer", "Taux recouvrement"])
@@ -178,9 +188,19 @@ class StatisticsPage(QWidget):
         self.trend_table.setMaximumHeight(180)
         setup_table(self.trend_table)
         self.success_by_level_label = QLabel("Taux de réussite par niveau")
-        self.success_by_level_chart = SimpleBarChart("Réussite par niveau (%)", "#16a34a")
+        self.success_by_level_chart = SimpleBarChart("Réussite par niveau (%)", "#16a34a", "%", 1)
+        self.success_by_level_table = QTableWidget()
+        self.success_by_level_table.setColumnCount(4)
+        self.success_by_level_table.setHorizontalHeaderLabels(["Niveau", "Évalués", "Réussites", "Taux"])
+        self.success_by_level_table.setMaximumHeight(190)
+        setup_table(self.success_by_level_table)
         self.success_by_term_label = QLabel("Taux de réussite par trimestre")
-        self.success_by_term_chart = SimpleBarChart("Réussite par trimestre (%)", "#f59e0b")
+        self.success_by_term_chart = SimpleBarChart("Réussite par trimestre (%)", "#f59e0b", "%", 1)
+        self.success_by_term_table = QTableWidget()
+        self.success_by_term_table.setColumnCount(4)
+        self.success_by_term_table.setHorizontalHeaderLabels(["Trimestre", "Évalués", "Réussites", "Taux"])
+        self.success_by_term_table.setMaximumHeight(190)
+        setup_table(self.success_by_term_table)
 
         actions = QHBoxLayout()
         self.preview_btn = QPushButton("Aperçu PDF")
@@ -200,8 +220,10 @@ class StatisticsPage(QWidget):
         self.layout.addWidget(self.trend_table)
         self.layout.addWidget(self.success_by_level_label)
         self.layout.addWidget(self.success_by_level_chart)
+        self.layout.addWidget(self.success_by_level_table)
         self.layout.addWidget(self.success_by_term_label)
         self.layout.addWidget(self.success_by_term_chart)
+        self.layout.addWidget(self.success_by_term_table)
         self.layout.addLayout(actions)
         self.scroll_area.setWidget(self.content_widget)
         self.root_layout.addWidget(self.scroll_area)
@@ -299,6 +321,12 @@ class StatisticsPage(QWidget):
             self.trend_chart.set_data([], [])
             self.success_by_level_chart.set_data([], [])
             self.success_by_term_chart.set_data([], [])
+            self.levels_table.setRowCount(0)
+            self.trend_table.setRowCount(0)
+            self.success_by_level_table.setRowCount(0)
+            self.success_by_term_table.setRowCount(0)
+            self.recovery_rate_card.value_label.setText("0.0%")
+            self.success_rate_card.value_label.setText("0.0%")
             return
 
         conn = get_connection()
@@ -416,11 +444,15 @@ class StatisticsPage(QWidget):
             self.levels_table.setRowCount(len(level_rows))
             level_labels = []
             level_rates = []
+            total_due = 0.0
+            total_paid = 0.0
             for i, (level, count_students, due, paid) in enumerate(level_rows):
                 due = float(due or 0)
                 paid = float(paid or 0)
                 remaining = max(0.0, due - paid)
                 rate = (paid / due * 100.0) if due > 0 else 0.0
+                total_due += due
+                total_paid += paid
 
                 vals = [
                     str(level),
@@ -435,6 +467,8 @@ class StatisticsPage(QWidget):
                 level_rates.append(float(rate))
 
             self.levels_chart.set_data(level_labels, level_rates)
+            global_recovery = (total_paid / total_due * 100.0) if total_due > 0 else 0.0
+            self.recovery_rate_card.value_label.setText(f"{global_recovery:.1f}%")
 
             # Trend table
             trend_where = ["EXTRACT(YEAR FROM p.payment_date) = %s"]
@@ -524,11 +558,28 @@ class StatisticsPage(QWidget):
             success_rows = cur.fetchall()
             success_level_labels = []
             success_level_rates = []
-            for level_name, success_count, evaluated_count in success_rows:
+            total_success_count = 0.0
+            total_evaluated_count = 0.0
+            self.success_by_level_table.setRowCount(len(success_rows))
+            for index, (level_name, success_count, evaluated_count) in enumerate(success_rows):
+                success_count = float(success_count or 0)
+                evaluated_count = float(evaluated_count or 0)
+                total_success_count += success_count
+                total_evaluated_count += evaluated_count
+                rate = (success_count * 100.0 / evaluated_count) if evaluated_count else 0.0
+                row_values = [
+                    str(level_name),
+                    f"{evaluated_count:.0f}",
+                    f"{success_count:.0f}",
+                    f"{rate:.1f}%",
+                ]
+                for column_index, value in enumerate(row_values):
+                    self.success_by_level_table.setItem(index, column_index, QTableWidgetItem(value))
                 success_level_labels.append(str(level_name))
-                rate = (float(success_count or 0) * 100.0 / float(evaluated_count or 1)) if evaluated_count else 0.0
                 success_level_rates.append(round(rate, 1))
             self.success_by_level_chart.set_data(success_level_labels, success_level_rates)
+            global_success_rate = (total_success_count * 100.0 / total_evaluated_count) if total_evaluated_count else 0.0
+            self.success_rate_card.value_label.setText(f"{global_success_rate:.1f}%")
 
             # Graphique réussite par trimestre
             cur.execute(
@@ -575,9 +626,20 @@ class StatisticsPage(QWidget):
             term_success_rows = cur.fetchall()
             term_labels = []
             term_rates = []
-            for _, term_name, success_count, evaluated_count in term_success_rows:
+            self.success_by_term_table.setRowCount(len(term_success_rows))
+            for index, (_, term_name, success_count, evaluated_count) in enumerate(term_success_rows):
+                success_count = float(success_count or 0)
+                evaluated_count = float(evaluated_count or 0)
+                rate = (success_count * 100.0 / evaluated_count) if evaluated_count else 0.0
+                row_values = [
+                    str(term_name),
+                    f"{evaluated_count:.0f}",
+                    f"{success_count:.0f}",
+                    f"{rate:.1f}%",
+                ]
+                for column_index, value in enumerate(row_values):
+                    self.success_by_term_table.setItem(index, column_index, QTableWidgetItem(value))
                 term_labels.append(str(term_name))
-                rate = (float(success_count or 0) * 100.0 / float(evaluated_count or 1)) if evaluated_count else 0.0
                 term_rates.append(round(rate, 1))
             self.success_by_term_chart.set_data(term_labels, term_rates)
 
@@ -604,6 +666,28 @@ class StatisticsPage(QWidget):
             trend_rows.append([
                 self.trend_table.item(r, c).text() if self.trend_table.item(r, c) else ""
                 for c in range(self.trend_table.columnCount())
+            ])
+
+        success_level_headers = [
+            self.success_by_level_table.horizontalHeaderItem(i).text()
+            for i in range(self.success_by_level_table.columnCount())
+        ]
+        success_level_rows = []
+        for r in range(self.success_by_level_table.rowCount()):
+            success_level_rows.append([
+                self.success_by_level_table.item(r, c).text() if self.success_by_level_table.item(r, c) else ""
+                for c in range(self.success_by_level_table.columnCount())
+            ])
+
+        success_term_headers = [
+            self.success_by_term_table.horizontalHeaderItem(i).text()
+            for i in range(self.success_by_term_table.columnCount())
+        ]
+        success_term_rows = []
+        for r in range(self.success_by_term_table.rowCount()):
+            success_term_rows.append([
+                self.success_by_term_table.item(r, c).text() if self.success_by_term_table.item(r, c) else ""
+                for c in range(self.success_by_term_table.columnCount())
             ])
 
         doc = SimpleDocTemplate(filepath, pagesize=A4, leftMargin=24, rightMargin=24, topMargin=24, bottomMargin=24)
@@ -639,6 +723,12 @@ class StatisticsPage(QWidget):
             Spacer(1, 12),
             Paragraph("<b>Tendance mensuelle</b>", styles["Heading3"]),
             make_table([trend_headers] + (trend_rows or [["-", "-"]])),
+            Spacer(1, 12),
+            Paragraph("<b>Réussite par niveau</b>", styles["Heading3"]),
+            make_table([success_level_headers] + (success_level_rows or [["-", "-", "-", "-"]])),
+            Spacer(1, 12),
+            Paragraph("<b>Réussite par trimestre</b>", styles["Heading3"]),
+            make_table([success_term_headers] + (success_term_rows or [["-", "-", "-", "-"]])),
         ]
 
         doc.build(story)

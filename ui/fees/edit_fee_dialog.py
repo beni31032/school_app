@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QFormLayout, QLineEdit,
-    QTextEdit, QPushButton, QMessageBox
+    QTextEdit, QPushButton, QMessageBox, QHBoxLayout
 )
 
 from database.connection import get_connection
@@ -31,13 +31,46 @@ class EditFeeDialog(QDialog):
         self.form_layout.addRow("Nom :", self.name_input)
         self.form_layout.addRow("Description :", self.description_input)
 
+        btn_layout = QHBoxLayout()
+        btn_layout.addWidget(self.save_btn)
+        btn_layout.addWidget(self.cancel_btn)
+
         self.layout.addLayout(self.form_layout)
-        self.layout.addWidget(self.save_btn)
-        self.layout.addWidget(self.cancel_btn)
+        self.layout.addLayout(btn_layout)
 
         self.setLayout(self.layout)
+        self.apply_local_styles()
 
         self.load_fee()
+
+    def apply_local_styles(self):
+        self.setStyleSheet(
+            """
+            QDialog { background-color: #f8fafc; }
+            QLabel {
+                color: #111827;
+                font-weight: 600;
+                min-width: 130px;
+            }
+            QLineEdit, QTextEdit {
+                background-color: white;
+                color: #111827;
+                border: 1px solid #cbd5e1;
+                border-radius: 6px;
+                padding: 6px 8px;
+            }
+            QPushButton {
+                background-color: #2563eb;
+                color: white;
+                border: none;
+                border-radius: 7px;
+                padding: 8px 12px;
+                font-weight: 700;
+            }
+            QPushButton:hover { background-color: #1d4ed8; }
+            QPushButton:pressed { background-color: #1e40af; }
+            """
+        )
 
     def load_fee(self):
         conn = get_connection()

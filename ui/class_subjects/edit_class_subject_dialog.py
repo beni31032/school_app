@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QFormLayout, QLabel,
-    QPushButton, QMessageBox, QSpinBox
+    QPushButton, QMessageBox, QSpinBox, QHBoxLayout
 )
 
 from database.connection import get_connection
@@ -36,12 +36,46 @@ class EditClassSubjectDialog(QDialog):
         self.form_layout.addRow("Matière :", self.subject_label)
         self.form_layout.addRow("Coefficient :", self.coefficient_input)
 
+        btn_layout = QHBoxLayout()
+        btn_layout.addWidget(self.save_btn)
+        btn_layout.addWidget(self.cancel_btn)
+
         self.layout.addLayout(self.form_layout)
-        self.layout.addWidget(self.save_btn)
-        self.layout.addWidget(self.cancel_btn)
+        self.layout.addLayout(btn_layout)
         self.setLayout(self.layout)
+        self.apply_local_styles()
 
         self.load_data()
+
+    def apply_local_styles(self):
+        self.setStyleSheet(
+            """
+            QDialog { background-color: #f8fafc; }
+            QLabel {
+                color: #111827;
+                font-weight: 600;
+                min-width: 130px;
+            }
+            QSpinBox {
+                background-color: white;
+                color: #111827;
+                border: 1px solid #cbd5e1;
+                border-radius: 6px;
+                padding: 6px 8px;
+                min-height: 28px;
+            }
+            QPushButton {
+                background-color: #2563eb;
+                color: white;
+                border: none;
+                border-radius: 7px;
+                padding: 8px 12px;
+                font-weight: 700;
+            }
+            QPushButton:hover { background-color: #1d4ed8; }
+            QPushButton:pressed { background-color: #1e40af; }
+            """
+        )
 
     def load_data(self):
         conn = get_connection()

@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QFormLayout, QLineEdit, QComboBox,
-    QPushButton, QFileDialog, QMessageBox, QDateEdit, QLabel
+    QPushButton, QFileDialog, QMessageBox, QDateEdit, QLabel, QHBoxLayout
 )
 from PyQt6.QtCore import QDate
 
@@ -32,6 +32,7 @@ class AddStudentDialog(QDialog):
         self.birth_date_input = QDateEdit()
         self.birth_date_input.setCalendarPopup(True)
         self.birth_date_input.setDate(QDate.currentDate())
+        self.birth_date_input.setDisplayFormat("yyyy-MM-dd")
 
         self.gender_input = QComboBox()
         self.gender_input.addItems(["Masculin", "Féminin"])
@@ -58,15 +59,49 @@ class AddStudentDialog(QDialog):
         self.form_layout.addRow("Classe :", self.class_input)
         self.form_layout.addRow(self.photo_button, self.photo_label)
 
+        btn_layout = QHBoxLayout()
+        btn_layout.addWidget(self.save_button)
+        btn_layout.addWidget(self.cancel_button)
+
         self.layout.addLayout(self.form_layout)
-        self.layout.addWidget(self.save_button)
-        self.layout.addWidget(self.cancel_button)
+        self.layout.addLayout(btn_layout)
 
         self.setLayout(self.layout)
+        self.apply_local_styles()
 
         self.load_establishments()
         self.establishment_input.currentIndexChanged.connect(self.load_classes)
         self.load_classes()
+
+    def apply_local_styles(self):
+        self.setStyleSheet(
+            """
+            QDialog { background-color: #f8fafc; }
+            QLabel {
+                color: #111827;
+                font-weight: 600;
+                min-width: 130px;
+            }
+            QLineEdit, QDateEdit, QComboBox {
+                background-color: white;
+                color: #111827;
+                border: 1px solid #cbd5e1;
+                border-radius: 6px;
+                padding: 6px 8px;
+                min-height: 28px;
+            }
+            QPushButton {
+                background-color: #2563eb;
+                color: white;
+                border: none;
+                border-radius: 7px;
+                padding: 8px 12px;
+                font-weight: 700;
+            }
+            QPushButton:hover { background-color: #1d4ed8; }
+            QPushButton:pressed { background-color: #1e40af; }
+            """
+        )
 
     def load_establishments(self):
         self.establishment_input.clear()

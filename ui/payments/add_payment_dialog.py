@@ -6,8 +6,9 @@ from datetime import date
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QFormLayout, QPushButton, QMessageBox,
     QLabel, QDoubleSpinBox, QLineEdit, QTableWidget, QTableWidgetItem,
-    QHeaderView
+    QHeaderView, QHBoxLayout
 )
+from PyQt6.QtCore import Qt
 
 from database.connection import get_connection
 from utils.receipt_generator import generate_receipt
@@ -77,10 +78,45 @@ class AddPaymentDialog(QDialog):
         summary_form.addRow("Montant à encaisser :", self.amount_input)
 
         self.layout.addLayout(summary_form)
-        self.layout.addWidget(self.save_btn)
-        self.layout.addWidget(self.cancel_btn)
+        actions = QHBoxLayout()
+        actions.addWidget(self.save_btn)
+        actions.addWidget(self.cancel_btn)
+        self.layout.addLayout(actions)
 
         self.setLayout(self.layout)
+
+        self.setStyleSheet(
+            """
+            QDialog { background-color: #f8fafc; }
+            QLabel { color: #111827; font-weight: 600; }
+            QLineEdit, QDoubleSpinBox, QTableWidget {
+                background-color: white;
+                color: #111827;
+                border: 1px solid #cbd5e1;
+                border-radius: 6px;
+            }
+            QLineEdit, QDoubleSpinBox {
+                padding: 6px 8px;
+            }
+            QPushButton {
+                min-height: 34px;
+                border-radius: 8px;
+                font-weight: 700;
+                padding: 6px 12px;
+            }
+            QPushButton:first-of-type {
+                background-color: #2563eb;
+                color: white;
+                border: none;
+            }
+            QPushButton:first-of-type:hover { background-color: #1d4ed8; }
+            QPushButton:last-of-type {
+                background-color: white;
+                color: #111827;
+                border: 1px solid #cbd5e1;
+            }
+            """
+        )
 
         self.search_input.textChanged.connect(self.load_students)
         self.students_table.itemSelectionChanged.connect(self.on_student_selected)
@@ -197,9 +233,10 @@ class AddPaymentDialog(QDialog):
 
             self.students_table.setRowCount(len(rows))
             for i, (student_id, label, class_name) in enumerate(rows):
-                self.students_table.setItem(i, 0, QTableWidgetItem(str(student_id)))
-                self.students_table.setItem(i, 1, QTableWidgetItem(label))
-                self.students_table.setItem(i, 2, QTableWidgetItem(class_name))
+                for col, value in enumerate((str(student_id), label, class_name)):
+                    item = QTableWidgetItem("" if value is None else str(value))
+                    item.setFlags(item.flags() ^ Qt.ItemFlag.ItemIsEditable)
+                    self.students_table.setItem(i, col, item)
 
             self.students_table.resizeColumnsToContents()
 
@@ -298,10 +335,11 @@ class AddPaymentDialog(QDialog):
 
             self.fee_input.setRowCount(len(rows))
             for i, (class_fee_id, fee_name, amount, fee_id) in enumerate(rows):
-                self.fee_input.setItem(i, 0, QTableWidgetItem(str(class_fee_id)))
-                self.fee_input.setItem(i, 1, QTableWidgetItem(fee_name))
-                self.fee_input.setItem(i, 2, QTableWidgetItem(f"{float(amount):.2f}"))
-                self.fee_input.setItem(i, 3, QTableWidgetItem(str(fee_id)))
+                values = (str(class_fee_id), fee_name, f"{float(amount):.2f}", str(fee_id))
+                for col, value in enumerate(values):
+                    item = QTableWidgetItem("" if value is None else str(value))
+                    item.setFlags(item.flags() ^ Qt.ItemFlag.ItemIsEditable)
+                    self.fee_input.setItem(i, col, item)
 
             self.fee_input.resizeColumnsToContents()
 

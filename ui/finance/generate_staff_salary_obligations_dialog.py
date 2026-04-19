@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import (
     QTextEdit,
     QVBoxLayout,
     QDoubleSpinBox,
+    QHBoxLayout,
 )
 
 from database.connection import get_connection
@@ -62,11 +63,44 @@ class GenerateStaffSalaryObligationsDialog(QDialog):
 
         self.generate_btn = QPushButton("Générer")
         self.cancel_btn = QPushButton("Annuler")
+        actions = QHBoxLayout()
+        actions.addWidget(self.generate_btn)
+        actions.addWidget(self.cancel_btn)
 
         layout.addLayout(form)
-        layout.addWidget(self.generate_btn)
-        layout.addWidget(self.cancel_btn)
+        layout.addLayout(actions)
         self.setLayout(layout)
+
+        self.setStyleSheet(
+            """
+            QDialog { background-color: #f8fafc; }
+            QLabel { color: #111827; font-weight: 600; }
+            QComboBox, QTextEdit, QDoubleSpinBox {
+                background-color: white;
+                color: #111827;
+                border: 1px solid #cbd5e1;
+                border-radius: 6px;
+                padding: 6px 8px;
+            }
+            QPushButton {
+                min-height: 34px;
+                border-radius: 8px;
+                font-weight: 700;
+                padding: 6px 12px;
+            }
+            QPushButton:first-of-type {
+                background-color: #2563eb;
+                color: white;
+                border: none;
+            }
+            QPushButton:first-of-type:hover { background-color: #1d4ed8; }
+            QPushButton:last-of-type {
+                background-color: white;
+                color: #111827;
+                border: 1px solid #cbd5e1;
+            }
+            """
+        )
 
         self.generate_btn.clicked.connect(self.generate_obligations)
         self.cancel_btn.clicked.connect(self.reject)

@@ -1,7 +1,7 @@
 from database.connection import get_connection
 
 
-def ensure_teacher_schema() -> None:
+def ensure_subject_schema() -> None:
     conn = get_connection()
     if not conn:
         raise Exception("Connexion base impossible")
@@ -10,7 +10,7 @@ def ensure_teacher_schema() -> None:
         cursor = conn.cursor()
         cursor.execute(
             """
-            ALTER TABLE teachers
+            ALTER TABLE subjects
             ADD COLUMN IF NOT EXISTS establishment_id INTEGER
             """
         )
@@ -21,10 +21,10 @@ def ensure_teacher_schema() -> None:
                 IF NOT EXISTS (
                     SELECT 1
                     FROM pg_constraint
-                    WHERE conname = 'teachers_establishment_id_fkey'
+                    WHERE conname = 'subjects_establishment_id_fkey'
                 ) THEN
-                    ALTER TABLE teachers
-                    ADD CONSTRAINT teachers_establishment_id_fkey
+                    ALTER TABLE subjects
+                    ADD CONSTRAINT subjects_establishment_id_fkey
                     FOREIGN KEY (establishment_id) REFERENCES establishments(id);
                 END IF;
             END $$;
@@ -32,20 +32,8 @@ def ensure_teacher_schema() -> None:
         )
         cursor.execute(
             """
-            ALTER TABLE teachers
-            ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE
-            """
-        )
-        cursor.execute(
-            """
-            CREATE INDEX IF NOT EXISTS idx_teachers_establishment
-            ON teachers(establishment_id)
-            """
-        )
-        cursor.execute(
-            """
-            CREATE INDEX IF NOT EXISTS idx_teachers_active_name
-            ON teachers(is_active, last_name, first_name)
+            CREATE INDEX IF NOT EXISTS idx_subjects_establishment_name
+            ON subjects(establishment_id, name)
             """
         )
         conn.commit()

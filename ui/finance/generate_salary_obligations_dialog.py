@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import (
     QTextEdit,
     QVBoxLayout,
     QDoubleSpinBox,
+    QHBoxLayout,
 )
 
 from database.connection import get_connection
@@ -38,6 +39,7 @@ class GenerateSalaryObligationsDialog(QDialog):
         self.teacher_input = QComboBox()
         self.month_input = QComboBox()
         self.year_input = QComboBox()
+        self.mode_input = QComboBox()
 
         self.amount_unique_input = QDoubleSpinBox()
         self.amount_unique_input.setRange(0, 999999999)
@@ -59,9 +61,12 @@ class GenerateSalaryObligationsDialog(QDialog):
         for y in range(today.year() - 1, today.year() + 4):
             self.year_input.addItem(str(y), y)
         self.year_input.setCurrentText(str(today.year()))
+        self.mode_input.addItem("Enseignants: montant unique", "UNIQUE")
+        self.mode_input.addItem("Enseignants: par niveau", "BY_LEVEL")
 
         form.addRow("Établissement :", self.establishment_input)
         form.addRow("Enseignant :", self.teacher_input)
+        form.addRow("Mode enseignants :", self.mode_input)
         form.addRow("Mois :", self.month_input)
         form.addRow("Année :", self.year_input)
         form.addRow("Montant enseignants (unique/fallback) :", self.amount_unique_input)
@@ -73,17 +78,53 @@ class GenerateSalaryObligationsDialog(QDialog):
 
         self.generate_btn = QPushButton("Générer")
         self.cancel_btn = QPushButton("Annuler")
+        actions = QHBoxLayout()
+        actions.addWidget(self.generate_btn)
+        actions.addWidget(self.cancel_btn)
 
         layout.addLayout(form)
-        layout.addWidget(self.generate_btn)
-        layout.addWidget(self.cancel_btn)
+        layout.addLayout(actions)
         self.setLayout(layout)
+
+        self.setStyleSheet(
+            """
+            QDialog { background-color: #f8fafc; }
+            QLabel { color: #111827; font-weight: 600; }
+            QComboBox, QTextEdit, QDoubleSpinBox {
+                background-color: white;
+                color: #111827;
+                border: 1px solid #cbd5e1;
+                border-radius: 6px;
+                padding: 6px 8px;
+            }
+            QPushButton {
+                min-height: 34px;
+                border-radius: 8px;
+                font-weight: 700;
+                padding: 6px 12px;
+            }
+            QPushButton:first-of-type {
+                background-color: #2563eb;
+                color: white;
+                border: none;
+            }
+            QPushButton:first-of-type:hover { background-color: #1d4ed8; }
+            QPushButton:last-of-type {
+                background-color: white;
+                color: #111827;
+                border: 1px solid #cbd5e1;
+            }
+            """
+        )
+
+        self.mode_input.currentIndexChanged.connect(self.update_amount_mode)
 
         self.generate_btn.clicked.connect(self.generate_obligations)
         self.cancel_btn.clicked.connect(self.reject)
         self.establishment_input.currentIndexChanged.connect(self.load_teachers)
 
         self.load_establishments()
+        self.update_amount_mode()
 
     def load_establishments(self):
         conn = get_connection()
@@ -153,6 +194,8 @@ class GenerateSalaryObligationsDialog(QDialog):
         return (row[0] or "").strip().lower() if row else ""
 
     def _amount_for_level(self, level: str) -> float:
+        if self.mode_input.currentData() == "UNIQUE":
+            return float(self.amount_unique_input.value())
         mapping = {
             "maternelle": float(self.amount_maternelle_input.value()),
             "primaire": float(self.amount_primaire_input.value()),
@@ -163,6 +206,13 @@ class GenerateSalaryObligationsDialog(QDialog):
         }
         level_amount = mapping.get(level, 0.0)
         return level_amount if level_amount > 0 else float(self.amount_unique_input.value())
+
+    def update_amount_mode(self):
+        by_level = self.mode_input.currentData() == "BY_LEVEL"
+        self.amount_maternelle_input.setEnabled(by_level)
+        self.amount_primaire_input.setEnabled(by_level)
+        self.amount_college_input.setEnabled(by_level)
+        self.amount_lycee_input.setEnabled(by_level)
 
     def generate_obligations(self):
         est_id = self.establishment_input.currentData()

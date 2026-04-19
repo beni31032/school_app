@@ -4,7 +4,7 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QFormLayout, QComboBox,
     QPushButton, QMessageBox, QTableWidget, QTableWidgetItem,
-    QHeaderView,QAbstractItemView
+    QHeaderView, QAbstractItemView, QHBoxLayout, QLabel, QFrame
 )
 from PyQt6.QtCore import Qt
 
@@ -21,6 +21,7 @@ class PrimaryGradesPage(QWidget):
 
         self.layout = QVBoxLayout()
         self.form_layout = QFormLayout()
+        self.buttons_layout = QHBoxLayout()
 
         self.class_input = QComboBox()
         self.term_input = QComboBox()
@@ -35,15 +36,44 @@ class PrimaryGradesPage(QWidget):
             QAbstractItemView.EditTrigger.SelectedClicked |
             QAbstractItemView.EditTrigger.EditKeyPressed)
 
+        self.summary_card = QFrame()
+        self.summary_card.setObjectName("gradesSummaryCard")
+        summary_layout = QFormLayout(self.summary_card)
+        summary_layout.setContentsMargins(12, 12, 12, 12)
+        summary_layout.setVerticalSpacing(6)
+        self.info_class = QLabel("-")
+        self.info_term = QLabel("-")
+        self.info_students = QLabel("0")
+        self.info_subjects = QLabel("0")
+        self.info_scale = QLabel("/10")
+        summary_layout.addRow("Classe :", self.info_class)
+        summary_layout.addRow("Trimestre :", self.info_term)
+        summary_layout.addRow("Élèves :", self.info_students)
+        summary_layout.addRow("Matières :", self.info_subjects)
+        summary_layout.addRow("Barème :", self.info_scale)
+
         self.form_layout.addRow("Classe :", self.class_input)
         self.form_layout.addRow("Trimestre :", self.term_input)
 
         self.layout.addLayout(self.form_layout)
-        self.layout.addWidget(self.load_btn)
+        self.buttons_layout.addWidget(self.load_btn)
+        self.buttons_layout.addWidget(self.save_btn)
+        self.buttons_layout.addStretch()
+        self.layout.addLayout(self.buttons_layout)
+        self.layout.addWidget(self.summary_card)
         self.layout.addWidget(self.table)
-        self.layout.addWidget(self.save_btn)
 
         self.setLayout(self.layout)
+        self.setStyleSheet(
+            """
+            QLabel { color: #111827; font-weight: 600; }
+            QFrame#gradesSummaryCard {
+                background: white;
+                border: 1px solid #d1d5db;
+                border-radius: 10px;
+            }
+            """
+        )
 
         self.load_btn.clicked.connect(self.load_grid)
         self.save_btn.clicked.connect(self.save_grades)
@@ -216,8 +246,13 @@ class PrimaryGradesPage(QWidget):
             self.table.setRowCount(len(students))
 
             for row_index, (student_id, student_name) in enumerate(students):
-                self.table.setItem(row_index, 0, QTableWidgetItem(str(student_id)))
-                self.table.setItem(row_index, 1, QTableWidgetItem(student_name))
+                id_item = QTableWidgetItem(str(student_id))
+                id_item.setFlags(id_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                self.table.setItem(row_index, 0, id_item)
+
+                name_item = QTableWidgetItem(student_name)
+                name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                self.table.setItem(row_index, 1, name_item)
 
                 for col_index, (subject_id, subject_name) in enumerate(self.subjects, start=2):
                     value = grades_map.get((student_id, subject_id), "")
@@ -226,11 +261,19 @@ class PrimaryGradesPage(QWidget):
                     self.table.setItem(row_index, col_index, item)
 
             self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+            self.update_summary(len(students))
 
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Chargement grille impossible : {e}")
         finally:
             conn.close()
+
+    def update_summary(self, student_count: int = 0):
+        self.info_class.setText(self.class_input.currentText() or "-")
+        self.info_term.setText(self.term_input.currentText() or "-")
+        self.info_students.setText(str(student_count))
+        self.info_subjects.setText(str(len(self.subjects)))
+        self.info_scale.setText("/10")
 
     def save_grades(self):
         class_id = self.class_input.currentData()

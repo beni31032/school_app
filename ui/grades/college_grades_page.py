@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QFormLayout, QComboBox,
     QPushButton, QMessageBox, QTableWidget, QTableWidgetItem,
-    QHeaderView, QAbstractItemView
+    QHeaderView, QAbstractItemView, QHBoxLayout, QLabel, QFrame
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QBrush
@@ -19,6 +19,7 @@ class CollegeGradesPage(QWidget):
 
         self.layout = QVBoxLayout()
         self.form_layout = QFormLayout()
+        self.buttons_layout = QHBoxLayout()
 
         self.class_input = QComboBox()
         self.term_input = QComboBox()
@@ -73,15 +74,42 @@ class CollegeGradesPage(QWidget):
             }
         """)
 
+        self.summary_card = QFrame()
+        self.summary_card.setObjectName("gradesSummaryCard")
+        summary_layout = QFormLayout(self.summary_card)
+        summary_layout.setContentsMargins(12, 12, 12, 12)
+        summary_layout.setVerticalSpacing(6)
+        self.info_class = QLabel("-")
+        self.info_term = QLabel("-")
+        self.info_students = QLabel("0")
+        self.info_subjects = QLabel("0")
+        self.info_scale = QLabel("/20")
+        summary_layout.addRow("Classe :", self.info_class)
+        summary_layout.addRow("Trimestre :", self.info_term)
+        summary_layout.addRow("Élèves :", self.info_students)
+        summary_layout.addRow("Matières :", self.info_subjects)
+        summary_layout.addRow("Barème :", self.info_scale)
+
         self.form_layout.addRow("Classe :", self.class_input)
         self.form_layout.addRow("Trimestre :", self.term_input)
 
         self.layout.addLayout(self.form_layout)
-        self.layout.addWidget(self.load_btn)
+        self.buttons_layout.addWidget(self.load_btn)
+        self.buttons_layout.addWidget(self.save_btn)
+        self.buttons_layout.addStretch()
+        self.layout.addLayout(self.buttons_layout)
+        self.layout.addWidget(self.summary_card)
         self.layout.addWidget(self.table)
-        self.layout.addWidget(self.save_btn)
 
         self.setLayout(self.layout)
+        self.setStyleSheet(self.styleSheet() + """
+            QLabel { color: #111827; font-weight: 600; }
+            QFrame#gradesSummaryCard {
+                background: white;
+                border: 1px solid #d1d5db;
+                border-radius: 10px;
+            }
+        """)
 
         self.load_btn.clicked.connect(self.load_grid)
         self.save_btn.clicked.connect(self.save_grades)
@@ -317,11 +345,19 @@ class CollegeGradesPage(QWidget):
             self.table.resizeRowsToContents()
             for row in range(self.table.rowCount()):
                 self.table.setRowHeight(row, 30)
+            self.update_summary(len(students))
 
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Chargement grille impossible : {e}")
         finally:
             conn.close()
+
+    def update_summary(self, student_count: int = 0):
+        self.info_class.setText(self.class_input.currentText() or "-")
+        self.info_term.setText(self.term_input.currentText() or "-")
+        self.info_students.setText(str(student_count))
+        self.info_subjects.setText(str(len(self.subjects)))
+        self.info_scale.setText("/20")
 
     # =========================
     # SAUVEGARDE

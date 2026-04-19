@@ -14,7 +14,11 @@ from PyQt6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QMessageBox,
+    QLineEdit,
+    QFrame,
+    QFormLayout,
 )
+from PyQt6.QtCore import Qt
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
@@ -56,12 +60,16 @@ class ListsPage(QWidget):
         for label, key in LIST_TYPES:
             self.type_filter.addItem(label, key)
 
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Recherche rapide...")
         self.establishment_filter = QComboBox()
         self.school_year_filter = QComboBox()
         self.class_filter = QComboBox()
 
         filters.addWidget(QLabel("Type"))
         filters.addWidget(self.type_filter)
+        filters.addWidget(QLabel("Recherche"))
+        filters.addWidget(self.search_input)
         filters.addWidget(QLabel("Établissement"))
         filters.addWidget(self.establishment_filter)
         filters.addWidget(QLabel("Année"))
@@ -83,8 +91,23 @@ class ListsPage(QWidget):
         self.table = QTableWidget()
         setup_table(self.table)
 
+        self.summary_card = QFrame()
+        self.summary_card.setObjectName("listsSummaryCard")
+        summary_layout = QFormLayout(self.summary_card)
+        summary_layout.setContentsMargins(12, 12, 12, 12)
+        summary_layout.setVerticalSpacing(6)
+
+        self.summary_type = QLabel("-")
+        self.summary_scope = QLabel("-")
+        self.summary_count = QLabel("0")
+
+        summary_layout.addRow("Liste :", self.summary_type)
+        summary_layout.addRow("Filtre appliqué :", self.summary_scope)
+        summary_layout.addRow("Nombre de lignes :", self.summary_count)
+
         layout.addLayout(filters)
         layout.addLayout(actions)
+        layout.addWidget(self.summary_card)
         layout.addWidget(self.table)
         self.setLayout(layout)
 
@@ -92,6 +115,10 @@ class ListsPage(QWidget):
 
         self.type_filter.currentIndexChanged.connect(self.on_type_changed)
         self.establishment_filter.currentIndexChanged.connect(self.load_classes)
+        self.establishment_filter.currentIndexChanged.connect(self.load_data)
+        self.school_year_filter.currentIndexChanged.connect(self.load_data)
+        self.class_filter.currentIndexChanged.connect(self.load_data)
+        self.search_input.textChanged.connect(self.load_data)
         self.refresh_btn.clicked.connect(self.load_data)
         self.export_csv_btn.clicked.connect(self.export_csv)
         self.preview_pdf_btn.clicked.connect(self.preview_pdf)
@@ -106,6 +133,14 @@ class ListsPage(QWidget):
         self.setStyleSheet(
             """
             QLabel { color: #111827; font-weight: 600; }
+            QLineEdit {
+                background-color: white;
+                color: #111827;
+                border: 1px solid #cbd5e1;
+                border-radius: 6px;
+                padding: 6px 8px;
+                min-height: 28px;
+            }
             QComboBox {
                 background-color: #303030;
                 color: #ffffff;
@@ -119,6 +154,11 @@ class ListsPage(QWidget):
                 color: #ffffff;
                 selection-background-color: #2563eb;
                 selection-color: #ffffff;
+            }
+            QFrame#listsSummaryCard {
+                background: white;
+                border: 1px solid #d1d5db;
+                border-radius: 10px;
             }
             """
         )
@@ -187,6 +227,7 @@ class ListsPage(QWidget):
         est_id = self.establishment_filter.currentData()
         sy_id = self.school_year_filter.currentData()
         class_id = self.class_filter.currentData()
+        search = f"%{self.search_input.text().strip()}%"
 
         conn = get_connection()
         if not conn:
@@ -197,8 +238,12 @@ class ListsPage(QWidget):
             cur = conn.cursor()
 
             if key == "STUDENTS_BY_CLASS":
-                where = ["e.school_year_id=%s", "s.is_active=TRUE"]
-                params = [sy_id]
+                where = [
+                    "e.school_year_id=%s",
+                    "s.is_active=TRUE",
+                    "(s.matricule ILIKE %s OR s.last_name ILIKE %s OR s.first_name ILIKE %s OR c.name ILIKE %s)",
+                ]
+                params = [sy_id, search, search, search, search]
                 if class_id is not None:
                     where.append("e.class_id=%s")
                     params.append(class_id)
@@ -224,8 +269,8 @@ class ListsPage(QWidget):
                 headers = ["Matricule", "Nom", "Prénom", "Sexe", "Classe"]
 
             elif key == "ALL_STUDENTS":
-                where = ["s.is_active=TRUE"]
-                params = []
+                where = ["s.is_active=TRUE", "(s.matricule ILIKE %s OR s.last_name ILIKE %s OR s.first_name ILIKE %s)"]
+                params = [search, search, search]
                 if self.is_global_admin:
                     if est_id is not None:
                         where.append("s.establishment_id=%s")
@@ -246,8 +291,11 @@ class ListsPage(QWidget):
                 headers = ["Matricule", "Nom", "Prénom", "Sexe"]
 
             elif key == "TEACHERS":
-                where = ["COALESCE(t.is_active, TRUE)=TRUE"]
-                params = []
+                where = [
+                    "COALESCE(t.is_active, TRUE)=TRUE",
+                    "(t.last_name ILIKE %s OR t.first_name ILIKE %s OR COALESCE(t.phone,'') ILIKE %s OR COALESCE(t.email,'') ILIKE %s)",
+                ]
+                params = [search, search, search, search]
                 if self.is_global_admin:
                     if est_id is not None:
                         where.append("t.establishment_id=%s")
@@ -268,8 +316,11 @@ class ListsPage(QWidget):
                 headers = ["Nom", "Prénom", "Téléphone", "Email"]
 
             elif key == "STAFF":
-                where = ["COALESCE(sm.is_active, TRUE)=TRUE"]
-                params = []
+                where = [
+                    "COALESCE(sm.is_active, TRUE)=TRUE",
+                    "(sm.last_name ILIKE %s OR sm.first_name ILIKE %s OR COALESCE(sm.role_title,'') ILIKE %s OR COALESCE(sm.phone,'') ILIKE %s OR COALESCE(sm.email,'') ILIKE %s)",
+                ]
+                params = [search, search, search, search, search]
                 if self.is_global_admin:
                     if est_id is not None:
                         where.append("sm.establishment_id=%s")
@@ -290,8 +341,8 @@ class ListsPage(QWidget):
                 headers = ["Nom", "Prénom", "Poste", "Téléphone", "Email"]
 
             else:  # CLASSES
-                where = []
-                params = []
+                where = ["(c.name ILIKE %s OR COALESCE(c.level,'') ILIKE %s OR COALESCE(cy.name,'') ILIKE %s OR e.name ILIKE %s)"]
+                params = [search, search, search, search]
                 if self.is_global_admin:
                     if est_id is not None:
                         where.append("c.establishment_id=%s")
@@ -317,6 +368,7 @@ class ListsPage(QWidget):
             self.current_headers = headers
             self.current_rows = [["" if v is None else str(v) for v in row] for row in rows]
             self._fill_table()
+            self._update_summary()
 
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Chargement impossible : {e}")
@@ -330,7 +382,23 @@ class ListsPage(QWidget):
         self.table.setRowCount(len(self.current_rows))
         for r, row in enumerate(self.current_rows):
             for c, value in enumerate(row):
-                self.table.setItem(r, c, QTableWidgetItem(value))
+                item = QTableWidgetItem(value)
+                item.setFlags(item.flags() ^ Qt.ItemFlag.ItemIsEditable)
+                self.table.setItem(r, c, item)
+
+    def _update_summary(self):
+        self.summary_type.setText(self.type_filter.currentText())
+        scope_parts = [
+            f"Établissement : {self.establishment_filter.currentText()}",
+            f"Année : {self.school_year_filter.currentText()}",
+        ]
+        if self.class_filter.isEnabled():
+            scope_parts.append(f"Classe : {self.class_filter.currentText()}")
+        search_text = self.search_input.text().strip()
+        if search_text:
+            scope_parts.append(f"Recherche : {search_text}")
+        self.summary_scope.setText(" | ".join(scope_parts))
+        self.summary_count.setText(str(len(self.current_rows)))
 
     def export_csv(self):
         if not self.current_rows:

@@ -9,10 +9,13 @@ from PyQt6.QtWidgets import (
     QLabel,
     QLineEdit,
     QComboBox,
+    QFrame,
+    QFormLayout,
 )
 
 from database.connection import get_connection
 from ui.staff.add_staff_dialog import AddStaffDialog
+from ui.staff.staff_details_dialog import StaffDetailsDialog
 from ui.staff.edit_staff_dialog import EditStaffDialog
 from utils.salary_service import ensure_salary_table
 from utils.table_style import setup_table
@@ -51,12 +54,14 @@ class StaffPage(QWidget):
         self.edit_btn = QPushButton("Modifier")
         self.disable_btn = QPushButton("Désactiver")
         self.enable_btn = QPushButton("Réactiver")
+        self.details_btn = QPushButton("Voir fiche complète")
         self.refresh_btn = QPushButton("Actualiser")
 
         buttons_layout.addWidget(self.add_btn)
         buttons_layout.addWidget(self.edit_btn)
         buttons_layout.addWidget(self.disable_btn)
         buttons_layout.addWidget(self.enable_btn)
+        buttons_layout.addWidget(self.details_btn)
         buttons_layout.addWidget(self.refresh_btn)
 
         self.table = QTableWidget()
@@ -67,21 +72,57 @@ class StaffPage(QWidget):
         self.table.setColumnHidden(0, True)
         setup_table(self.table)
 
+        self.details_card = QFrame()
+        self.details_card.setObjectName("staffDetailsCard")
+        details_layout = QFormLayout(self.details_card)
+        details_layout.setContentsMargins(12, 12, 12, 12)
+        details_layout.setVerticalSpacing(6)
+
+        self.detail_nom = QLabel("-")
+        self.detail_prenom = QLabel("-")
+        self.detail_poste = QLabel("-")
+        self.detail_phone = QLabel("-")
+        self.detail_email = QLabel("-")
+        self.detail_hire_date = QLabel("-")
+        self.detail_est = QLabel("-")
+        self.detail_status = QLabel("-")
+
+        details_layout.addRow("Nom :", self.detail_nom)
+        details_layout.addRow("Prénom :", self.detail_prenom)
+        details_layout.addRow("Poste :", self.detail_poste)
+        details_layout.addRow("Téléphone :", self.detail_phone)
+        details_layout.addRow("Email :", self.detail_email)
+        details_layout.addRow("Date d'embauche :", self.detail_hire_date)
+        details_layout.addRow("Établissement :", self.detail_est)
+        details_layout.addRow("Statut :", self.detail_status)
+
         layout.addLayout(filters_layout)
         layout.addLayout(buttons_layout)
         layout.addWidget(self.table)
+        layout.addWidget(self.details_card)
         self.setLayout(layout)
 
-        self.setStyleSheet("QLabel { color: #111827; font-weight: 600; }")
+        self.setStyleSheet(
+            """
+            QLabel { color: #111827; font-weight: 600; }
+            QFrame#staffDetailsCard {
+                background: white;
+                border: 1px solid #d1d5db;
+                border-radius: 10px;
+            }
+            """
+        )
 
         self.add_btn.clicked.connect(self.open_add_dialog)
         self.edit_btn.clicked.connect(self.open_edit_dialog)
         self.disable_btn.clicked.connect(lambda: self.set_active(False))
         self.enable_btn.clicked.connect(lambda: self.set_active(True))
+        self.details_btn.clicked.connect(self.open_details_dialog)
         self.refresh_btn.clicked.connect(self.load_staff)
         self.search_input.textChanged.connect(self.load_staff)
         self.status_filter.currentIndexChanged.connect(self.load_staff)
         self.establishment_filter.currentIndexChanged.connect(self.load_staff)
+        self.table.itemSelectionChanged.connect(self.load_selected_staff_details)
 
         self.load_establishment_filter()
         self.load_staff()
@@ -165,9 +206,70 @@ class StaffPage(QWidget):
             for i, row in enumerate(rows):
                 for j, value in enumerate(row):
                     self.table.setItem(i, j, QTableWidgetItem("" if value is None else str(value)))
+            if rows:
+                self.table.selectRow(0)
+            else:
+                self.clear_staff_details()
 
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Chargement impossible : {e}")
+        finally:
+            conn.close()
+
+    def clear_staff_details(self):
+        self.detail_nom.setText("-")
+        self.detail_prenom.setText("-")
+        self.detail_poste.setText("-")
+        self.detail_phone.setText("-")
+        self.detail_email.setText("-")
+        self.detail_hire_date.setText("-")
+        self.detail_est.setText("-")
+        self.detail_status.setText("-")
+
+    def load_selected_staff_details(self):
+        selected = self.table.currentRow()
+        if selected == -1:
+            self.clear_staff_details()
+            return
+
+        item = self.table.item(selected, 0)
+        if not item:
+            self.clear_staff_details()
+            return
+
+        conn = get_connection()
+        if not conn:
+            self.clear_staff_details()
+            return
+
+        try:
+            cursor = conn.cursor()
+            sql = """
+                SELECT sm.last_name, sm.first_name, sm.role_title, sm.phone, sm.email, sm.hire_date,
+                       e.name, CASE WHEN COALESCE(sm.is_active, TRUE) THEN 'Actif' ELSE 'Inactif' END
+                FROM staff_members sm
+                JOIN establishments e ON e.id = sm.establishment_id
+                WHERE sm.id = %s
+            """
+            params = [int(item.text())]
+            if not self.is_global_admin:
+                sql += " AND sm.establishment_id = %s"
+                params.append(self.current_user["establishment_id"])
+            cursor.execute(sql, params)
+            row = cursor.fetchone()
+            if not row:
+                self.clear_staff_details()
+                return
+
+            nom, prenom, poste, phone, email, hire_date, est_name, status_label = row
+            self.detail_nom.setText(nom or "-")
+            self.detail_prenom.setText(prenom or "-")
+            self.detail_poste.setText(poste or "-")
+            self.detail_phone.setText(phone or "-")
+            self.detail_email.setText(email or "-")
+            self.detail_hire_date.setText(str(hire_date) if hire_date else "-")
+            self.detail_est.setText(est_name or "-")
+            self.detail_status.setText(status_label or "-")
         finally:
             conn.close()
 
@@ -187,6 +289,18 @@ class StaffPage(QWidget):
         dialog = EditStaffDialog(item.text(), current_user=self.current_user, parent=self)
         if dialog.exec():
             self.load_staff()
+
+    def open_details_dialog(self):
+        selected = self.table.currentRow()
+        if selected == -1:
+            QMessageBox.warning(self, "Erreur", "Sélectionnez un employé")
+            return
+        item = self.table.item(selected, 0)
+        if not item:
+            QMessageBox.warning(self, "Erreur", "Employé invalide")
+            return
+        dialog = StaffDetailsDialog(int(item.text()), current_user=self.current_user, parent=self)
+        dialog.exec()
 
     def set_active(self, active: bool):
         selected = self.table.currentRow()

@@ -1,8 +1,9 @@
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QFormLayout, QLineEdit,
     QTableWidget, QTableWidgetItem, QHeaderView,
-    QLabel, QPushButton, QMessageBox, QDoubleSpinBox
+    QLabel, QPushButton, QMessageBox, QDoubleSpinBox, QHBoxLayout
 )
+from PyQt6.QtCore import Qt
 
 from database.connection import get_connection
 from utils.table_style import setup_table
@@ -50,9 +51,12 @@ class AddDiscountDialog(QDialog):
         form.addRow("Motif :", self.reason_input)
 
         self.save_btn = QPushButton("Enregistrer")
+        self.cancel_btn = QPushButton("Annuler")
 
-        
-        
+        btn_layout = QHBoxLayout()
+        btn_layout.addWidget(self.save_btn)
+        btn_layout.addWidget(self.cancel_btn)
+
         layout.addWidget(QLabel("Recherche élève"))
         layout.addWidget(self.search_input)
         layout.addWidget(self.students_table)
@@ -61,17 +65,55 @@ class AddDiscountDialog(QDialog):
         layout.addWidget(self.fee_table)
 
         layout.addLayout(form)
-        layout.addWidget(self.save_btn)
+        layout.addLayout(btn_layout)
 
         self.setLayout(layout)
+        self.apply_local_styles()
 
         self.search_input.textChanged.connect(self.load_students)
         self.students_table.itemSelectionChanged.connect(self.on_student_selected)
         self.save_btn.clicked.connect(self.save_discount)
+        self.cancel_btn.clicked.connect(self.reject)
 
         self.load_current_school_year()
         self.load_students()
         self.load_fees()
+
+    def apply_local_styles(self):
+        self.setStyleSheet(
+            """
+            QDialog { background-color: #f8fafc; }
+            QLabel {
+                color: #111827;
+                font-weight: 600;
+            }
+            QLineEdit, QDoubleSpinBox {
+                background-color: white;
+                color: #111827;
+                border: 1px solid #cbd5e1;
+                border-radius: 6px;
+                padding: 6px 8px;
+                min-height: 28px;
+            }
+            QTableWidget {
+                background-color: white;
+                color: #111827;
+                gridline-color: #d1d5db;
+                selection-background-color: #bfdbfe;
+                selection-color: #111827;
+            }
+            QPushButton {
+                background-color: #2563eb;
+                color: white;
+                border: none;
+                border-radius: 7px;
+                padding: 8px 12px;
+                font-weight: 700;
+            }
+            QPushButton:hover { background-color: #1d4ed8; }
+            QPushButton:pressed { background-color: #1e40af; }
+            """
+        )
 
     def load_current_school_year(self):
         conn = get_connection()
@@ -165,7 +207,12 @@ class AddDiscountDialog(QDialog):
 
             for i, row in enumerate(rows):
                 for j, val in enumerate(row):
-                    self.students_table.setItem(i, j, QTableWidgetItem(str(val)))
+                    item = QTableWidgetItem(str(val))
+                    item.setFlags(item.flags() ^ Qt.ItemFlag.ItemIsEditable)
+                    self.students_table.setItem(i, j, item)
+
+            if rows:
+                self.students_table.selectRow(0)
 
         finally:
             conn.close()
@@ -192,7 +239,12 @@ class AddDiscountDialog(QDialog):
 
             for i, row in enumerate(rows):
                 for j, val in enumerate(row):
-                    self.fee_table.setItem(i, j, QTableWidgetItem(str(val)))
+                    item = QTableWidgetItem(str(val))
+                    item.setFlags(item.flags() ^ Qt.ItemFlag.ItemIsEditable)
+                    self.fee_table.setItem(i, j, item)
+
+            if rows:
+                self.fee_table.selectRow(0)
 
         finally:
             conn.close()
