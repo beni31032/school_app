@@ -24,7 +24,8 @@ def generate_lycee_bulletin(student_id: int, term_id: int) -> str:
                 e.name,
                 COALESCE(e.address, ''),
                 COALESCE(e.phone, ''),
-                COALESCE(si.email, '')
+                COALESCE(si.email, ''),
+                COALESCE(si.logo_path, '')
             FROM classes c
             JOIN establishments e ON e.id = c.establishment_id
             LEFT JOIN school_info si ON TRUE
@@ -42,6 +43,7 @@ def generate_lycee_bulletin(student_id: int, term_id: int) -> str:
     school_address = school[1] if school else ""
     school_phone = school[2] if school else ""
     school_email = school[3] if school else ""
+    school_logo = school[4] if school else ""
 
     os.makedirs("bulletins/lycee", exist_ok=True)
     filename = f"bulletins/lycee/{data['student_name'].replace(' ', '_')}_{data['term_name'].replace(' ', '_')}.pdf"
@@ -53,6 +55,11 @@ def generate_lycee_bulletin(student_id: int, term_id: int) -> str:
     right = width - 28
     y = height - 28
 
+    if school_logo and os.path.exists(school_logo):
+        try:
+            c.drawImage(school_logo, left, y - 24, width=42, height=42, preserveAspectRatio=True, mask='auto')
+        except Exception:
+            pass
     c.setFont("Helvetica-Bold", 9)
     c.drawString(left, y, "MINISTERE DES ENSEIGNEMENTS")
     y -= 11

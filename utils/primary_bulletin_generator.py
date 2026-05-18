@@ -26,7 +26,8 @@ def generate_primary_bulletin(student_id: int, term_id: int) -> str:
                 e.name,
                 COALESCE(e.address, ''),
                 COALESCE(e.phone, ''),
-                COALESCE(si.email, '')
+                COALESCE(si.email, ''),
+                COALESCE(si.logo_path, '')
             FROM classes c
             JOIN establishments e ON e.id = c.establishment_id
             LEFT JOIN school_info si ON TRUE
@@ -42,6 +43,7 @@ def generate_primary_bulletin(student_id: int, term_id: int) -> str:
         school_address = school[1] if school else ""
         school_phone = school[2] if school else ""
         school_email = school[3] if school else ""
+        school_logo = school[4] if school else ""
 
         cursor.execute(
             """
@@ -83,6 +85,11 @@ def generate_primary_bulletin(student_id: int, term_id: int) -> str:
     # EN-TÊTE
     # =========================
     c.setFont("Helvetica-Bold", 7.5)
+    if school_logo and os.path.exists(school_logo):
+        try:
+            c.drawImage(school_logo, left, y - 22, width=34, height=34, preserveAspectRatio=True, mask='auto')
+        except Exception:
+            pass
     c.drawString(left, y, "MINISTERE DES ENSEIGNEMENTS")
     y -= 9
     c.drawString(left, y, "PRIMAIRE ET SECONDAIRE")

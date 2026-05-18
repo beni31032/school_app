@@ -20,6 +20,7 @@ from database.connection import get_connection
 from ui.students.add_student_dialog import AddStudentDialog
 from ui.students.edit_student_dialog import EditStudentDialog
 from ui.students.student_details_dialog import StudentDetailsDialog
+from ui.students.student_optional_subjects_dialog import StudentOptionalSubjectsDialog
 from utils.table_style import setup_table
 
 
@@ -61,6 +62,7 @@ class StudentsPage(QWidget):
         self.edit_btn = QPushButton("Modifier")
         self.deactivate_btn = QPushButton("Désactiver")
         self.reactivate_btn = QPushButton("Réactiver")
+        self.optional_subjects_btn = QPushButton("Options matières")
         self.details_btn = QPushButton("Voir fiche complète")
         self.refresh_btn = QPushButton("Actualiser")
 
@@ -68,6 +70,7 @@ class StudentsPage(QWidget):
         buttons_layout.addWidget(self.edit_btn)
         buttons_layout.addWidget(self.deactivate_btn)
         buttons_layout.addWidget(self.reactivate_btn)
+        buttons_layout.addWidget(self.optional_subjects_btn)
         buttons_layout.addWidget(self.details_btn)
         buttons_layout.addWidget(self.refresh_btn)
 
@@ -150,6 +153,7 @@ class StudentsPage(QWidget):
         self.edit_btn.clicked.connect(self.edit_student)
         self.deactivate_btn.clicked.connect(lambda: self.set_student_active(False))
         self.reactivate_btn.clicked.connect(lambda: self.set_student_active(True))
+        self.optional_subjects_btn.clicked.connect(self.open_optional_subjects_dialog)
         self.details_btn.clicked.connect(self.open_details_dialog)
 
         self.search_input.textChanged.connect(self.load_students)
@@ -551,6 +555,30 @@ class StudentsPage(QWidget):
 
         dialog = StudentDetailsDialog(
             student_id=int(student_id_item.text()),
+            current_user=self.current_user,
+            parent=self,
+        )
+        dialog.exec()
+
+    def open_optional_subjects_dialog(self):
+        selected = self.table.currentRow()
+        if selected == -1:
+            QMessageBox.warning(self, "Erreur", "Sélectionnez un élève")
+            return
+
+        school_year_id = self.school_year_filter.currentData()
+        if school_year_id is None:
+            QMessageBox.warning(self, "Validation", "Sélectionnez une année scolaire.")
+            return
+
+        student_id_item = self.table.item(selected, 0)
+        if not student_id_item:
+            QMessageBox.warning(self, "Erreur", "Élève invalide")
+            return
+
+        dialog = StudentOptionalSubjectsDialog(
+            student_id=int(student_id_item.text()),
+            school_year_id=int(school_year_id),
             current_user=self.current_user,
             parent=self,
         )

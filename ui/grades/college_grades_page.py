@@ -7,6 +7,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QBrush
 
 from database.connection import get_connection
+from utils.subject_service import ensure_subject_schema
 from utils.table_style import setup_table
 
 
@@ -16,6 +17,8 @@ class CollegeGradesPage(QWidget):
 
         self.current_user = current_user
         self.subjects = []
+        self.student_subject_access = {}
+        ensure_subject_schema()
 
         self.layout = QVBoxLayout()
         self.form_layout = QFormLayout()
@@ -116,6 +119,25 @@ class CollegeGradesPage(QWidget):
 
         self.load_classes()
         self.load_terms()
+
+    def _level_is_student_based(self, level_name: str) -> bool:
+        normalized = (level_name or "").strip().lower()
+        aliases = ("3eme", "3ème", "seconde", "2nde", "premiere", "première", "1ere", "1ère", "terminale", "tle")
+        return any(alias in normalized for alias in aliases)
+
+    def _make_grade_item(self, value, enabled: bool) -> QTableWidgetItem:
+        text = "" if value == "" else str(value)
+        item = QTableWidgetItem(text)
+        item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        if enabled:
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
+            item.setBackground(QBrush(QColor("white")))
+        else:
+            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            item.setText("")
+            item.setBackground(QBrush(QColor("#e5e7eb")))
+            item.setToolTip("Matière facultative non choisie par cet élève.")
+        return item
 
     # =========================
     # CHARGEMENTS
@@ -228,13 +250,26 @@ class CollegeGradesPage(QWidget):
 
             school_year_id = row[0]
 
+            cursor.execute(
+                """
+                SELECT COALESCE(level, '')
+                FROM classes
+                WHERE id = %s
+                """,
+                (class_id,),
+            )
+            class_level_row = cursor.fetchone()
+            class_level = class_level_row[0] if class_level_row else ""
+            student_based_optional = self._level_is_student_based(class_level)
+
             # Matières de la classe
             cursor.execute(
                 """
                 SELECT
                     cs.subject_id,
                     s.name,
-                    COALESCE(cs.coefficient, 1)
+                    COALESCE(cs.coefficient, 1),
+                    COALESCE(cs.subject_type, 'OBLIGATOIRE')
                 FROM class_subjects cs
                 JOIN subjects s ON s.id = cs.subject_id
                 WHERE cs.class_id = %s
@@ -261,6 +296,20 @@ class CollegeGradesPage(QWidget):
             )
             students = cursor.fetchall()
 
+            optional_subject_choices = set()
+            if student_based_optional:
+                cursor.execute(
+                    """
+                    SELECT sos.student_id, cs.subject_id
+                    FROM student_optional_subjects sos
+                    JOIN class_subjects cs ON cs.id = sos.class_subject_id
+                    WHERE sos.school_year_id = %s
+                      AND cs.class_id = %s
+                    """,
+                    (school_year_id, class_id),
+                )
+                optional_subject_choices = {(student_id, subject_id) for student_id, subject_id in cursor.fetchall()}
+
             # Notes existantes
             cursor.execute(
                 """
@@ -286,11 +335,20 @@ class CollegeGradesPage(QWidget):
             for student_id, subject_id, grade_type, value in cursor.fetchall():
                 grades_map[(student_id, subject_id, grade_type)] = value
 
+            self.student_subject_access = {}
+            for student_id, _student_name in students:
+                for subject_id, _subject_name, _coefficient, subject_type in self.subjects:
+                    allowed = True
+                    if subject_type == "FACULTATIVE" and student_based_optional:
+                        allowed = (student_id, subject_id) in optional_subject_choices
+                    self.student_subject_access[(student_id, subject_id)] = allowed
+
             headers = ["ID", "Élève"]
-            for _, subject_name, _coefficient in self.subjects:
+            for _, subject_name, _coefficient, subject_type in self.subjects:
                 short_name = subject_name[:12]
-                headers.append(f"{short_name} C/20")
-                headers.append(f"{short_name} P/20")
+                suffix = " (F)" if subject_type == "FACULTATIVE" else ""
+                headers.append(f"{short_name}{suffix} C/20")
+                headers.append(f"{short_name}{suffix} P/20")
 
             self.table.clearContents()
             self.table.setRowCount(0)
@@ -321,16 +379,14 @@ class CollegeGradesPage(QWidget):
                 self.table.setItem(row_index, 1, name_item)
 
                 col = 2
-                for subject_id, _, _coefficient in self.subjects:
+                for subject_id, _, _coefficient, _subject_type in self.subjects:
                     classe_val = grades_map.get((student_id, subject_id, "classe"), "")
                     compo_val = grades_map.get((student_id, subject_id, "compo"), "")
 
-                    classe_item = QTableWidgetItem("" if classe_val == "" else str(classe_val))
-                    classe_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                    enabled = self.student_subject_access.get((student_id, subject_id), True)
+                    classe_item = self._make_grade_item(classe_val, enabled)
                     self.table.setItem(row_index, col, classe_item)
-
-                    compo_item = QTableWidgetItem("" if compo_val == "" else str(compo_val))
-                    compo_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                    compo_item = self._make_grade_item(compo_val, enabled)
                     self.table.setItem(row_index, col + 1, compo_item)
 
                     col += 2
@@ -390,7 +446,21 @@ class CollegeGradesPage(QWidget):
                 student_id = int(student_id_item.text())
                 col = 2
 
-                for subject_id, subject_name, _coefficient in self.subjects:
+                for subject_id, subject_name, _coefficient, _subject_type in self.subjects:
+                    if not self.student_subject_access.get((student_id, subject_id), True):
+                        for grade_type in ("classe", "compo"):
+                            cursor.execute(
+                                """
+                                DELETE FROM grades
+                                WHERE student_id = %s
+                                  AND subject_id = %s
+                                  AND term_id = %s
+                                  AND grade_type = %s
+                                """,
+                                (student_id, subject_id, term_id, grade_type)
+                            )
+                        col += 2
+                        continue
                     for grade_type, label in [("classe", "Classe"), ("compo", "Composition")]:
                         item = self.table.item(row, col)
                         raw_value = item.text().strip() if item else ""

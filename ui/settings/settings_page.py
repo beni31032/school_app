@@ -1,4 +1,5 @@
 from PyQt6.QtCore import QDate, Qt
+from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -17,8 +18,10 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QComboBox,
     QDateEdit,
+    QFileDialog,
 )
 from datetime import datetime, timedelta
+from pathlib import Path
 import re
 import unicodedata
 
@@ -487,6 +490,127 @@ class UserDialog(BaseSettingsDialog):
             conn.close()
 
 
+class SchoolInfoDialog(BaseSettingsDialog):
+    def __init__(self, current_user, parent=None):
+        super().__init__("Infos école", parent=parent)
+        self.current_user = current_user
+
+        self.name_input = QLineEdit()
+        self.address_input = QLineEdit()
+        self.phone_input = QLineEdit()
+        self.email_input = QLineEdit()
+        self.website_input = QLineEdit()
+        self.logo_input = QLineEdit()
+        self.browse_logo_btn = QPushButton("Choisir logo")
+
+        logo_row = QHBoxLayout()
+        logo_row.addWidget(self.logo_input, 1)
+        logo_row.addWidget(self.browse_logo_btn)
+
+        self.form.addRow("Nom :", self.name_input)
+        self.form.addRow("Adresse :", self.address_input)
+        self.form.addRow("Téléphone :", self.phone_input)
+        self.form.addRow("Email :", self.email_input)
+        self.form.addRow("Site web :", self.website_input)
+        self.form.addRow("Logo :", logo_row)
+
+        self.browse_logo_btn.clicked.connect(self.choose_logo)
+        self.save_btn.clicked.connect(self.save_school_info)
+
+        self.load_school_info()
+
+    def choose_logo(self):
+        selected, _ = QFileDialog.getOpenFileName(
+            self,
+            "Choisir un logo",
+            "",
+            "Images (*.png *.jpg *.jpeg *.bmp *.webp)"
+        )
+        if selected:
+            self.logo_input.setText(selected)
+
+    def load_school_info(self):
+        conn = get_connection()
+        if not conn:
+            return
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT
+                    COALESCE(name, ''),
+                    COALESCE(address, ''),
+                    COALESCE(phone, ''),
+                    COALESCE(email, ''),
+                    COALESCE(website, ''),
+                    COALESCE(logo_path, '')
+                FROM school_info
+                ORDER BY id
+                LIMIT 1
+                """
+            )
+            row = cursor.fetchone()
+            if row:
+                self.name_input.setText(row[0])
+                self.address_input.setText(row[1])
+                self.phone_input.setText(row[2])
+                self.email_input.setText(row[3])
+                self.website_input.setText(row[4])
+                self.logo_input.setText(row[5])
+        finally:
+            conn.close()
+
+    def save_school_info(self):
+        name = self.name_input.text().strip()
+        address = self.address_input.text().strip() or None
+        phone = self.phone_input.text().strip() or None
+        email = self.email_input.text().strip() or None
+        website = self.website_input.text().strip() or None
+        logo_path = self.logo_input.text().strip() or None
+
+        if logo_path and not Path(logo_path).exists():
+            QMessageBox.warning(self, "Validation", "Le fichier du logo est introuvable.")
+            return
+
+        conn = get_connection()
+        if not conn:
+            QMessageBox.critical(self, "Erreur", "Connexion base impossible")
+            return
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM school_info ORDER BY id LIMIT 1")
+            row = cursor.fetchone()
+            if row:
+                cursor.execute(
+                    """
+                    UPDATE school_info
+                    SET name = %s,
+                        address = %s,
+                        phone = %s,
+                        email = %s,
+                        website = %s,
+                        logo_path = %s
+                    WHERE id = %s
+                    """,
+                    (name or None, address, phone, email, website, logo_path, row[0]),
+                )
+            else:
+                cursor.execute(
+                    """
+                    INSERT INTO school_info (name, address, phone, email, website, logo_path)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    """,
+                    (name or None, address, phone, email, website, logo_path),
+                )
+            conn.commit()
+            self.accept()
+        except Exception as e:
+            conn.rollback()
+            QMessageBox.critical(self, "Erreur", f"Enregistrement impossible : {e}")
+        finally:
+            conn.close()
+
+
 class SettingsPage(QWidget):
     def __init__(self, current_user):
         super().__init__()
@@ -523,16 +647,19 @@ class SettingsPage(QWidget):
 
         self.tabs = QTabWidget()
 
+        self.school_info_tab = QWidget()
         self.establishments_tab = QWidget()
         self.school_years_tab = QWidget()
         self.users_tab = QWidget()
         self.promotion_tab = QWidget()
 
+        self.tabs.addTab(self.school_info_tab, "Infos école")
         self.tabs.addTab(self.establishments_tab, "Établissements")
         self.tabs.addTab(self.school_years_tab, "Années scolaires")
         self.tabs.addTab(self.users_tab, "Utilisateurs")
         self.tabs.addTab(self.promotion_tab, "Passage année suivante")
 
+        self._build_school_info_tab()
         self._build_establishments_tab()
         self._build_school_years_tab()
         self._build_users_tab()
@@ -614,6 +741,56 @@ class SettingsPage(QWidget):
 
         self.refresh_btn.clicked.connect(self.refresh_all)
         self.refresh_all()
+
+    def _build_school_info_tab(self):
+        layout = QVBoxLayout()
+        actions = QHBoxLayout()
+        self.edit_school_info_btn = QPushButton("Modifier")
+        actions.addWidget(self.edit_school_info_btn)
+        actions.addStretch()
+
+        self.school_info_card = QFrame()
+        self.school_info_card.setObjectName("settingsCard")
+        card_layout = QHBoxLayout(self.school_info_card)
+        card_layout.setContentsMargins(16, 16, 16, 16)
+        card_layout.setSpacing(20)
+
+        self.school_logo_preview = QLabel("Aucun logo")
+        self.school_logo_preview.setFixedSize(140, 140)
+        self.school_logo_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.school_logo_preview.setStyleSheet(
+            "QLabel { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; color: #6b7280; }"
+        )
+
+        info_form = QFormLayout()
+        info_form.setVerticalSpacing(8)
+        self.school_info_name = QLabel("-")
+        self.school_info_address = QLabel("-")
+        self.school_info_phone = QLabel("-")
+        self.school_info_email = QLabel("-")
+        self.school_info_website = QLabel("-")
+        self.school_info_logo = QLabel("-")
+        self.school_info_logo.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        info_form.addRow("Nom :", self.school_info_name)
+        info_form.addRow("Adresse :", self.school_info_address)
+        info_form.addRow("Téléphone :", self.school_info_phone)
+        info_form.addRow("Email :", self.school_info_email)
+        info_form.addRow("Site web :", self.school_info_website)
+        info_form.addRow("Chemin logo :", self.school_info_logo)
+
+        form_wrapper = QWidget()
+        form_wrapper.setLayout(info_form)
+
+        card_layout.addWidget(self.school_logo_preview)
+        card_layout.addWidget(form_wrapper, 1)
+
+        layout.addLayout(actions)
+        layout.addWidget(self.school_info_card)
+        layout.addStretch()
+        self.school_info_tab.setLayout(layout)
+
+        self.edit_school_info_btn.clicked.connect(self.open_edit_school_info)
+        self.edit_school_info_btn.setEnabled(self.is_global_admin)
 
     def _build_establishments_tab(self):
         layout = QVBoxLayout()
@@ -1178,6 +1355,7 @@ class SettingsPage(QWidget):
 
     def refresh_all(self):
         self.load_summary()
+        self.load_school_info()
         self.load_establishments()
         self.load_school_years()
         self.load_users()
@@ -1209,6 +1387,65 @@ class SettingsPage(QWidget):
             self.school_year_card.value_label.setText(school_year_name)
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Chargement paramètres impossible : {e}")
+        finally:
+            conn.close()
+
+    def load_school_info(self):
+        self.school_info_name.setText("-")
+        self.school_info_address.setText("-")
+        self.school_info_phone.setText("-")
+        self.school_info_email.setText("-")
+        self.school_info_website.setText("-")
+        self.school_info_logo.setText("-")
+        self.school_logo_preview.setPixmap(QPixmap())
+        self.school_logo_preview.setText("Aucun logo")
+
+        conn = get_connection()
+        if not conn:
+            return
+
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT
+                    COALESCE(name, ''),
+                    COALESCE(address, ''),
+                    COALESCE(phone, ''),
+                    COALESCE(email, ''),
+                    COALESCE(website, ''),
+                    COALESCE(logo_path, '')
+                FROM school_info
+                ORDER BY id
+                LIMIT 1
+                """
+            )
+            row = cursor.fetchone()
+            if not row:
+                return
+
+            name, address, phone, email, website, logo_path = row
+            self.school_info_name.setText(name or "-")
+            self.school_info_address.setText(address or "-")
+            self.school_info_phone.setText(phone or "-")
+            self.school_info_email.setText(email or "-")
+            self.school_info_website.setText(website or "-")
+            self.school_info_logo.setText(logo_path or "-")
+
+            if logo_path and Path(logo_path).exists():
+                pix = QPixmap(logo_path)
+                if not pix.isNull():
+                    scaled = pix.scaled(
+                        self.school_logo_preview.size(),
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation,
+                    )
+                    self.school_logo_preview.setPixmap(scaled)
+                    self.school_logo_preview.setText("")
+                else:
+                    self.school_logo_preview.setText("Logo invalide")
+            elif logo_path:
+                self.school_logo_preview.setText("Logo introuvable")
         finally:
             conn.close()
 
@@ -1302,6 +1539,11 @@ class SettingsPage(QWidget):
 
     def open_add_establishment(self):
         dialog = EstablishmentDialog(self.current_user, parent=self)
+        if dialog.exec():
+            self.refresh_all()
+
+    def open_edit_school_info(self):
+        dialog = SchoolInfoDialog(self.current_user, parent=self)
         if dialog.exec():
             self.refresh_all()
 

@@ -19,6 +19,7 @@ from ui.lists.lists_page import ListsPage
 from ui.statistics.statistics_page import StatisticsPage
 from ui.grades.grades_page import GradesPage
 from ui.fees.fees_page import FeesPage
+from ui.cycle_fees.cycle_fee_configs_page import CycleFeeConfigsPage
 from ui.class_fees.class_fees_page import ClassFeesPage
 from ui.payments.payments_page import PaymentsPage
 from ui.finance.student_finance_page import StudentFinancePage
@@ -239,6 +240,7 @@ class MainWindow(QMainWindow):
         self.lists_btn = self.create_menu_button("Listes", "📋")
         self.statistics_btn = self.create_menu_button("Statistiques", "📈")
         self.fees_btn = self.create_menu_button("Types de frais", "💰")
+        self.cycle_fees_btn = self.create_menu_button("Tarifs par cycle", "🧮")
         self.class_fees_btn = self.create_menu_button("Frais par classe", "💳")
         self.discounts_btn = self.create_menu_button("Réductions", "🏷️")
         self.expenses_btn = self.create_menu_button("Dépenses", "🧾")
@@ -305,6 +307,7 @@ class MainWindow(QMainWindow):
             "Finance",
             [
                 self.fees_btn,
+                self.cycle_fees_btn,
                 self.class_fees_btn,
                 self.discounts_btn,
                 self.expenses_btn,
@@ -366,6 +369,7 @@ class MainWindow(QMainWindow):
         self.page_statistics = StatisticsPage(current_user=self.current_user)
         self.page_grades = GradesPage(current_user=self.current_user)
         self.page_fees = FeesPage(current_user=self.current_user)
+        self.page_cycle_fees = CycleFeeConfigsPage(current_user=self.current_user)
         self.page_class_fees = ClassFeesPage(current_user=self.current_user)
         self.page_payments = PaymentsPage(current_user=self.current_user)
         self.page_student_finance = StudentFinancePage(current_user=self.current_user)
@@ -396,6 +400,7 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.page_lists)
         self.stack.addWidget(self.page_statistics)
         self.stack.addWidget(self.page_fees)
+        self.stack.addWidget(self.page_cycle_fees)
         self.stack.addWidget(self.page_class_fees)
         self.stack.addWidget(self.page_discounts)
         self.stack.addWidget(self.page_expenses)
@@ -455,6 +460,9 @@ class MainWindow(QMainWindow):
         )
         self.fees_btn.clicked.connect(
             lambda: self.switch_page(self.fees_btn, self.page_fees)
+        )
+        self.cycle_fees_btn.clicked.connect(
+            lambda: self.switch_page(self.cycle_fees_btn, self.page_cycle_fees)
         )
         self.class_fees_btn.clicked.connect(
             lambda: self.switch_page(self.class_fees_btn, self.page_class_fees)

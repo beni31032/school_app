@@ -1,6 +1,66 @@
 from database.connection import get_connection
 
 
+def _is_student_based_optional_level(level_name: str) -> bool:
+    normalized = (level_name or "").strip().lower()
+    aliases = ("3eme", "3ème", "seconde", "2nde", "premiere", "première", "1ere", "1ère", "terminale", "tle")
+    return any(alias in normalized for alias in aliases)
+
+
+def _get_class_level(class_id: int) -> str:
+    conn = get_connection()
+    if not conn:
+        raise Exception("Connexion base impossible")
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT COALESCE(level, '') FROM classes WHERE id = %s", (class_id,))
+        row = cursor.fetchone()
+        return row[0] if row else ""
+    finally:
+        conn.close()
+
+
+def _is_student_based_optional_class(class_id: int) -> bool:
+    return _is_student_based_optional_level(_get_class_level(class_id))
+
+
+def _get_term_school_year_id(term_id: int) -> int:
+    conn = get_connection()
+    if not conn:
+        raise Exception("Connexion base impossible")
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT school_year_id FROM terms WHERE id = %s", (term_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise Exception("Trimestre introuvable.")
+        return int(row[0])
+    finally:
+        conn.close()
+
+
+def _is_optional_subject_for_class(class_id: int, subject_id: int) -> bool:
+    conn = get_connection()
+    if not conn:
+        raise Exception("Connexion base impossible")
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT COALESCE(subject_type, 'OBLIGATOIRE')
+            FROM class_subjects
+            WHERE class_id = %s
+              AND subject_id = %s
+            LIMIT 1
+            """,
+            (class_id, subject_id),
+        )
+        row = cursor.fetchone()
+        return bool(row and row[0] == "FACULTATIVE")
+    finally:
+        conn.close()
+
+
 def get_lycee_appreciation(avg: float) -> str:
     if avg >= 16:
         return "Très bien"
@@ -32,8 +92,9 @@ def get_term_average_for_student(class_id: int, student_id: int, term_id: int) -
 
     try:
         cursor = conn.cursor()
-        cursor.execute(
-            """
+        student_based_optional = _is_student_based_optional_class(class_id)
+        school_year_id = _get_term_school_year_id(term_id)
+        sql = """
             WITH subject_averages AS (
                 SELECT
                     ss.subject_id,
@@ -52,15 +113,31 @@ def get_term_average_for_student(class_id: int, student_id: int, term_id: int) -
                        AND g.student_id = %s
                        AND g.term_id = %s
                     WHERE cs.class_id = %s
+        """
+        params = [student_id, term_id, class_id]
+        if student_based_optional:
+            sql += """
+                      AND (
+                            COALESCE(cs.subject_type, 'OBLIGATOIRE') <> 'FACULTATIVE'
+                            OR EXISTS (
+                                SELECT 1
+                                FROM student_optional_subjects sos
+                                WHERE sos.student_id = %s
+                                  AND sos.class_subject_id = cs.id
+                                  AND sos.school_year_id = %s
+                            )
+                      )
+            """
+            params.extend([student_id, school_year_id])
+        sql += """
                     GROUP BY cs.subject_id, cs.coefficient
                 ) ss
             )
             SELECT
                 COALESCE(SUM(note_def) / NULLIF(SUM(coefficient), 0), 0)
             FROM subject_averages
-            """,
-            (student_id, term_id, class_id)
-        )
+        """
+        cursor.execute(sql, params)
         row = cursor.fetchone()
         return float(row[0] or 0)
 
@@ -75,8 +152,8 @@ def get_general_rank(class_id: int, student_id: int, term_id: int, school_year_i
 
     try:
         cursor = conn.cursor()
-        cursor.execute(
-            """
+        student_based_optional = _is_student_based_optional_class(class_id)
+        sql = """
             WITH student_subjects AS (
                 SELECT
                     e.student_id,
@@ -94,6 +171,23 @@ def get_general_rank(class_id: int, student_id: int, term_id: int, school_year_i
                 WHERE e.class_id = %s
                   AND e.school_year_id = %s
                   AND st.is_active = TRUE
+        """
+        params = [term_id, class_id, school_year_id]
+        if student_based_optional:
+            sql += """
+                  AND (
+                        COALESCE(cs.subject_type, 'OBLIGATOIRE') <> 'FACULTATIVE'
+                        OR EXISTS (
+                            SELECT 1
+                            FROM student_optional_subjects sos
+                            WHERE sos.student_id = e.student_id
+                              AND sos.class_subject_id = cs.id
+                              AND sos.school_year_id = %s
+                        )
+                  )
+            """
+            params.append(school_year_id)
+        sql += """
                 GROUP BY e.student_id, cs.subject_id, cs.coefficient
             ),
             student_totals AS (
@@ -109,9 +203,8 @@ def get_general_rank(class_id: int, student_id: int, term_id: int, school_year_i
                 ROUND(COALESCE(st.total_notes / NULLIF(st.total_coef, 0), 0), 2) AS general_average
             FROM student_totals st
             ORDER BY general_average DESC, st.student_id
-            """,
-            (term_id, class_id, school_year_id)
-        )
+        """
+        cursor.execute(sql, params)
 
         rows = cursor.fetchall()
         effectif = len(rows)
@@ -141,8 +234,7 @@ def get_subject_rank(
 
     try:
         cursor = conn.cursor()
-        cursor.execute(
-            """
+        sql = """
             SELECT
                 e.student_id,
                 ROUND((
@@ -158,11 +250,27 @@ def get_subject_rank(
             WHERE e.class_id = %s
               AND e.school_year_id = %s
               AND st.is_active = TRUE
+        """
+        params = [subject_id, term_id, class_id, school_year_id]
+        if _is_student_based_optional_class(class_id) and _is_optional_subject_for_class(class_id, subject_id):
+            sql += """
+              AND EXISTS (
+                    SELECT 1
+                    FROM student_optional_subjects sos
+                    JOIN class_subjects cs
+                      ON cs.id = sos.class_subject_id
+                    WHERE sos.student_id = e.student_id
+                      AND sos.school_year_id = %s
+                      AND cs.class_id = %s
+                      AND cs.subject_id = %s
+              )
+            """
+            params.extend([school_year_id, class_id, subject_id])
+        sql += """
             GROUP BY e.student_id
             ORDER BY subject_avg DESC, e.student_id
-            """,
-            (subject_id, term_id, class_id, school_year_id)
-        )
+        """
+        cursor.execute(sql, params)
 
         rows = cursor.fetchall()
 
@@ -183,8 +291,8 @@ def get_class_statistics(class_id: int, term_id: int, school_year_id: int) -> di
 
     try:
         cursor = conn.cursor()
-        cursor.execute(
-            """
+        student_based_optional = _is_student_based_optional_class(class_id)
+        sql = """
             WITH student_subjects AS (
                 SELECT
                     e.student_id,
@@ -202,6 +310,23 @@ def get_class_statistics(class_id: int, term_id: int, school_year_id: int) -> di
                 WHERE e.class_id = %s
                   AND e.school_year_id = %s
                   AND st.is_active = TRUE
+        """
+        params = [term_id, class_id, school_year_id]
+        if student_based_optional:
+            sql += """
+                  AND (
+                        COALESCE(cs.subject_type, 'OBLIGATOIRE') <> 'FACULTATIVE'
+                        OR EXISTS (
+                            SELECT 1
+                            FROM student_optional_subjects sos
+                            WHERE sos.student_id = e.student_id
+                              AND sos.class_subject_id = cs.id
+                              AND sos.school_year_id = %s
+                        )
+                  )
+            """
+            params.append(school_year_id)
+        sql += """
                 GROUP BY e.student_id, cs.subject_id, cs.coefficient
             ),
             student_averages AS (
@@ -220,10 +345,8 @@ def get_class_statistics(class_id: int, term_id: int, school_year_id: int) -> di
                 COALESCE(MIN(avg_general), 0),
                 COALESCE(AVG(avg_general), 0)
             FROM student_averages
-            """
-            ,
-            (term_id, class_id, school_year_id)
-        )
+        """
+        cursor.execute(sql, params)
 
         row = cursor.fetchone()
 
@@ -391,6 +514,7 @@ def get_lycee_bulletin_data(student_id: int, term_id: int) -> dict:
             school_year_name,
             titular_name,
         ) = student_row
+        student_based_optional = _is_student_based_optional_class(class_id)
 
         # Effectif + G/F
         cursor.execute(
@@ -410,8 +534,7 @@ def get_lycee_bulletin_data(student_id: int, term_id: int) -> dict:
         effectif, boys, girls = cursor.fetchone()
 
         # Détail des matières
-        cursor.execute(
-            """
+        sql = """
             SELECT
                 cs.subject_id,
                 sb.name AS subject_name,
@@ -434,6 +557,23 @@ def get_lycee_bulletin_data(student_id: int, term_id: int) -> dict:
                )
             LEFT JOIN teachers tr ON tr.id = ta.teacher_id
             WHERE cs.class_id = %s
+        """
+        params = [student_id, term_id, term_id, class_id]
+        if student_based_optional:
+            sql += """
+              AND (
+                    COALESCE(cs.subject_type, 'OBLIGATOIRE') <> 'FACULTATIVE'
+                    OR EXISTS (
+                        SELECT 1
+                        FROM student_optional_subjects sos
+                        WHERE sos.student_id = %s
+                          AND sos.class_subject_id = cs.id
+                          AND sos.school_year_id = %s
+                    )
+              )
+            """
+            params.extend([student_id, school_year_id])
+        sql += """
             GROUP BY
                 cs.subject_id,
                 sb.name,
@@ -442,9 +582,8 @@ def get_lycee_bulletin_data(student_id: int, term_id: int) -> dict:
                 tr.last_name,
                 tr.first_name
             ORDER BY sb.name
-            """,
-            (student_id, term_id, term_id, class_id)
-        )
+        """
+        cursor.execute(sql, params)
 
         subject_rows = cursor.fetchall()
 

@@ -17,6 +17,7 @@ from database.connection import get_connection
 from ui.class_subjects.add_class_subject_dialog import AddClassSubjectDialog
 from ui.class_subjects.edit_class_subject_dialog import EditClassSubjectDialog
 from ui.class_subjects.class_subject_details_dialog import ClassSubjectDetailsDialog
+from utils.subject_service import ensure_subject_schema
 from utils.table_style import setup_table
 
 
@@ -26,6 +27,7 @@ class ClassSubjectsPage(QWidget):
 
         self.current_user = current_user
         self.is_global_admin = self.current_user["role"] == "ADMIN_GLOBAL"
+        ensure_subject_schema()
 
         layout = QVBoxLayout()
 
@@ -34,6 +36,10 @@ class ClassSubjectsPage(QWidget):
         self.search_input.setPlaceholderText("Rechercher classe, matiere...")
         self.establishment_filter = QComboBox()
         self.class_filter = QComboBox()
+        self.type_filter = QComboBox()
+        self.type_filter.addItem("Tous", None)
+        self.type_filter.addItem("Obligatoires", "OBLIGATOIRE")
+        self.type_filter.addItem("Facultatives", "FACULTATIVE")
 
         filters_layout.addWidget(QLabel("Recherche"))
         filters_layout.addWidget(self.search_input)
@@ -41,6 +47,8 @@ class ClassSubjectsPage(QWidget):
         filters_layout.addWidget(self.establishment_filter)
         filters_layout.addWidget(QLabel("Classe"))
         filters_layout.addWidget(self.class_filter)
+        filters_layout.addWidget(QLabel("Type"))
+        filters_layout.addWidget(self.type_filter)
 
         buttons_layout = QHBoxLayout()
         self.add_btn = QPushButton("Ajouter")
@@ -54,12 +62,13 @@ class ClassSubjectsPage(QWidget):
         buttons_layout.addWidget(self.refresh_btn)
 
         self.table = QTableWidget()
-        self.table.setColumnCount(5)
+        self.table.setColumnCount(6)
         self.table.setHorizontalHeaderLabels([
             "ID",
             "Classe",
             "Etablissement",
             "Matiere",
+            "Type",
             "Coefficient",
         ])
         self.table.setColumnHidden(0, True)
@@ -74,11 +83,13 @@ class ClassSubjectsPage(QWidget):
         self.d_class = QLabel("-")
         self.d_est = QLabel("-")
         self.d_subject = QLabel("-")
+        self.d_type = QLabel("-")
         self.d_coef = QLabel("-")
 
         details_layout.addRow("Classe :", self.d_class)
         details_layout.addRow("Etablissement :", self.d_est)
         details_layout.addRow("Matiere :", self.d_subject)
+        details_layout.addRow("Type :", self.d_type)
         details_layout.addRow("Coefficient :", self.d_coef)
 
         layout.addLayout(filters_layout)
@@ -105,6 +116,7 @@ class ClassSubjectsPage(QWidget):
         self.search_input.textChanged.connect(self.load_data)
         self.establishment_filter.currentIndexChanged.connect(self.on_establishment_changed)
         self.class_filter.currentIndexChanged.connect(self.load_data)
+        self.type_filter.currentIndexChanged.connect(self.load_data)
         self.table.itemSelectionChanged.connect(self.load_selected_details)
 
         self.load_establishment_filter()
@@ -179,6 +191,7 @@ class ClassSubjectsPage(QWidget):
         search = f"%{self.search_input.text().strip()}%"
         est_id = self.establishment_filter.currentData()
         class_id = self.class_filter.currentData()
+        subject_type = self.type_filter.currentData()
 
         try:
             cursor = conn.cursor()
@@ -200,6 +213,10 @@ class ClassSubjectsPage(QWidget):
                 filters.append("c.id = %s")
                 params.append(class_id)
 
+            if subject_type is not None:
+                filters.append("COALESCE(cs.subject_type, 'OBLIGATOIRE') = %s")
+                params.append(subject_type)
+
             where_sql = " AND ".join(filters)
 
             cursor.execute(
@@ -209,6 +226,7 @@ class ClassSubjectsPage(QWidget):
                     c.name AS class_name,
                     e.name AS establishment_name,
                     s.name AS subject_name,
+                    COALESCE(cs.subject_type, 'OBLIGATOIRE') AS subject_type,
                     cs.coefficient
                 FROM class_subjects cs
                 JOIN classes c ON c.id = cs.class_id
@@ -225,6 +243,8 @@ class ClassSubjectsPage(QWidget):
             self.table.setRowCount(len(rows))
             for row_index, row_data in enumerate(rows):
                 for col_index, value in enumerate(row_data):
+                    if col_index == 4:
+                        value = "Facultative" if value == "FACULTATIVE" else "Obligatoire"
                     text = "" if value is None else str(value)
                     self.table.setItem(row_index, col_index, QTableWidgetItem(text))
 
@@ -242,6 +262,7 @@ class ClassSubjectsPage(QWidget):
         self.d_class.setText("-")
         self.d_est.setText("-")
         self.d_subject.setText("-")
+        self.d_type.setText("-")
         self.d_coef.setText("-")
 
     def load_selected_details(self):
@@ -267,6 +288,7 @@ class ClassSubjectsPage(QWidget):
                     c.name,
                     e.name,
                     s.name,
+                    COALESCE(cs.subject_type, 'OBLIGATOIRE'),
                     cs.coefficient
                 FROM class_subjects cs
                 JOIN classes c ON c.id = cs.class_id
@@ -285,10 +307,11 @@ class ClassSubjectsPage(QWidget):
                 self.clear_details()
                 return
 
-            class_name, est_name, subject_name, coefficient = row
+            class_name, est_name, subject_name, subject_type, coefficient = row
             self.d_class.setText(class_name or "-")
             self.d_est.setText(est_name or "-")
             self.d_subject.setText(subject_name or "-")
+            self.d_type.setText("Facultative" if subject_type == "FACULTATIVE" else "Obligatoire")
             self.d_coef.setText(str(coefficient) if coefficient is not None else "-")
         finally:
             conn.close()

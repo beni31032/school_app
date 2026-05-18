@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
 )
 
 from database.connection import get_connection
+from utils.subject_service import ensure_subject_schema
 
 
 class ClassSubjectDetailsDialog(QDialog):
@@ -18,6 +19,7 @@ class ClassSubjectDetailsDialog(QDialog):
         self.class_subject_id = int(class_subject_id)
         self.current_user = current_user
         self.is_global_admin = self.current_user.get("role") == "ADMIN_GLOBAL"
+        ensure_subject_schema()
 
         self.setWindowTitle("Fiche complete matiere par classe")
         self.resize(760, 460)
@@ -37,6 +39,7 @@ class ClassSubjectDetailsDialog(QDialog):
         self.v_class = QLabel("-")
         self.v_est = QLabel("-")
         self.v_subject = QLabel("-")
+        self.v_type = QLabel("-")
         self.v_coef = QLabel("-")
         self.v_cycle = QLabel("-")
         self.v_level = QLabel("-")
@@ -45,6 +48,7 @@ class ClassSubjectDetailsDialog(QDialog):
         form.addRow("Classe :", self.v_class)
         form.addRow("Etablissement :", self.v_est)
         form.addRow("Matiere :", self.v_subject)
+        form.addRow("Type :", self.v_type)
         form.addRow("Coefficient :", self.v_coef)
         form.addRow("Cycle :", self.v_cycle)
         form.addRow("Niveau :", self.v_level)
@@ -110,6 +114,7 @@ class ClassSubjectDetailsDialog(QDialog):
                     c.name,
                     e.name,
                     s.name,
+                    COALESCE(cs.subject_type, 'OBLIGATOIRE'),
                     cs.coefficient,
                     COALESCE(cy.name, ''),
                     COALESCE(c.level, '')
@@ -131,11 +136,12 @@ class ClassSubjectDetailsDialog(QDialog):
                 QMessageBox.warning(self, "Erreur", "Affectation introuvable.")
                 return
 
-            row_id, class_name, est_name, subject_name, coefficient, cycle_name, level = row
+            row_id, class_name, est_name, subject_name, subject_type, coefficient, cycle_name, level = row
             self.v_id.setText(str(row_id))
             self.v_class.setText(class_name or "-")
             self.v_est.setText(est_name or "-")
             self.v_subject.setText(subject_name or "-")
+            self.v_type.setText("Facultative" if subject_type == "FACULTATIVE" else "Obligatoire")
             self.v_coef.setText(str(coefficient) if coefficient is not None else "-")
             self.v_cycle.setText(cycle_name or "-")
             self.v_level.setText(level or "-")

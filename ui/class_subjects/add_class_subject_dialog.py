@@ -23,6 +23,9 @@ class AddClassSubjectDialog(QDialog):
         self.establishment_input = QComboBox()
         self.class_input = QComboBox()
         self.subject_input = QComboBox()
+        self.subject_type_input = QComboBox()
+        self.subject_type_input.addItem("Obligatoire", "OBLIGATOIRE")
+        self.subject_type_input.addItem("Facultative", "FACULTATIVE")
 
         self.coefficient_input = QSpinBox()
         self.coefficient_input.setMinimum(1)
@@ -38,6 +41,7 @@ class AddClassSubjectDialog(QDialog):
         self.form_layout.addRow("Établissement :", self.establishment_input)
         self.form_layout.addRow("Classe :", self.class_input)
         self.form_layout.addRow("Matière :", self.subject_input)
+        self.form_layout.addRow("Type :", self.subject_type_input)
         self.form_layout.addRow("Coefficient :", self.coefficient_input)
 
         btn_layout = QHBoxLayout()
@@ -188,6 +192,7 @@ class AddClassSubjectDialog(QDialog):
     def save_data(self):
         class_id = self.class_input.currentData()
         subject_id = self.subject_input.currentData()
+        subject_type = self.subject_type_input.currentData()
         coefficient = self.coefficient_input.value()
 
         if class_id is None or subject_id is None:
@@ -222,10 +227,10 @@ class AddClassSubjectDialog(QDialog):
 
             cursor.execute(
                 """
-                INSERT INTO class_subjects (class_id, subject_id, coefficient)
-                VALUES (%s, %s, %s)
+                INSERT INTO class_subjects (class_id, subject_id, coefficient, subject_type)
+                VALUES (%s, %s, %s, %s)
                 """,
-                (class_id, subject_id, coefficient)
+                (class_id, subject_id, coefficient, subject_type)
             )
 
             conn.commit()

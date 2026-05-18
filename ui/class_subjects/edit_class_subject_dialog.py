@@ -1,9 +1,10 @@
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QFormLayout, QLabel,
-    QPushButton, QMessageBox, QSpinBox, QHBoxLayout
+    QPushButton, QMessageBox, QSpinBox, QHBoxLayout, QComboBox
 )
 
 from database.connection import get_connection
+from utils.subject_service import ensure_subject_schema
 
 
 class EditClassSubjectDialog(QDialog):
@@ -12,8 +13,9 @@ class EditClassSubjectDialog(QDialog):
 
         self.class_subject_id = int(class_subject_id)
         self.current_user = current_user
+        ensure_subject_schema()
 
-        self.setWindowTitle("Modifier coefficient")
+        self.setWindowTitle("Modifier matière par classe")
         self.setFixedWidth(400)
 
         self.layout = QVBoxLayout()
@@ -21,6 +23,9 @@ class EditClassSubjectDialog(QDialog):
 
         self.class_label = QLabel("-")
         self.subject_label = QLabel("-")
+        self.subject_type_input = QComboBox()
+        self.subject_type_input.addItem("Obligatoire", "OBLIGATOIRE")
+        self.subject_type_input.addItem("Facultative", "FACULTATIVE")
 
         self.coefficient_input = QSpinBox()
         self.coefficient_input.setMinimum(1)
@@ -34,6 +39,7 @@ class EditClassSubjectDialog(QDialog):
 
         self.form_layout.addRow("Classe :", self.class_label)
         self.form_layout.addRow("Matière :", self.subject_label)
+        self.form_layout.addRow("Type :", self.subject_type_input)
         self.form_layout.addRow("Coefficient :", self.coefficient_input)
 
         btn_layout = QHBoxLayout()
@@ -56,7 +62,7 @@ class EditClassSubjectDialog(QDialog):
                 font-weight: 600;
                 min-width: 130px;
             }
-            QSpinBox {
+            QSpinBox, QComboBox {
                 background-color: white;
                 color: #111827;
                 border: 1px solid #cbd5e1;
@@ -91,6 +97,7 @@ class EditClassSubjectDialog(QDialog):
                     """
                     SELECT
                         cs.coefficient,
+                        COALESCE(cs.subject_type, 'OBLIGATOIRE'),
                         c.name,
                         s.name
                     FROM class_subjects cs
@@ -105,6 +112,7 @@ class EditClassSubjectDialog(QDialog):
                     """
                     SELECT
                         cs.coefficient,
+                        COALESCE(cs.subject_type, 'OBLIGATOIRE'),
                         c.name,
                         s.name
                     FROM class_subjects cs
@@ -123,11 +131,13 @@ class EditClassSubjectDialog(QDialog):
                 self.reject()
                 return
 
-            coefficient, class_name, subject_name = row
+            coefficient, subject_type, class_name, subject_name = row
 
             self.class_label.setText(class_name or "-")
             self.subject_label.setText(subject_name or "-")
             self.coefficient_input.setValue(coefficient or 1)
+            index = self.subject_type_input.findData(subject_type or "OBLIGATOIRE")
+            self.subject_type_input.setCurrentIndex(index if index >= 0 else 0)
 
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Chargement impossible : {e}")
@@ -137,6 +147,7 @@ class EditClassSubjectDialog(QDialog):
 
     def update_data(self):
         coefficient = self.coefficient_input.value()
+        subject_type = self.subject_type_input.currentData()
 
         conn = get_connection()
         if not conn:
@@ -150,26 +161,26 @@ class EditClassSubjectDialog(QDialog):
                 cursor.execute(
                     """
                     UPDATE class_subjects
-                    SET coefficient = %s
+                    SET coefficient = %s, subject_type = %s
                     WHERE id = %s
                     """,
-                    (coefficient, self.class_subject_id)
+                    (coefficient, subject_type, self.class_subject_id)
                 )
             else:
                 cursor.execute(
                     """
                     UPDATE class_subjects cs
-                    SET coefficient = %s
+                    SET coefficient = %s, subject_type = %s
                     FROM classes c
                     WHERE cs.id = %s
                       AND c.id = cs.class_id
                       AND c.establishment_id = %s
                     """,
-                    (coefficient, self.class_subject_id, self.current_user["establishment_id"])
+                    (coefficient, subject_type, self.class_subject_id, self.current_user["establishment_id"])
                 )
 
             conn.commit()
-            QMessageBox.information(self, "Succès", "Coefficient modifié avec succès.")
+            QMessageBox.information(self, "Succès", "Matière par classe modifiée avec succès.")
             self.accept()
 
         except Exception as e:
