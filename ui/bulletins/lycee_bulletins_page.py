@@ -1,7 +1,3 @@
-import os
-import subprocess
-import sys
-
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
@@ -17,12 +13,20 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QLabel,
     QFrame,
+    QInputDialog,
 )
 from PyQt6.QtCore import Qt
 
 from database.connection import get_connection
 from utils.lycee_bulletin_generator import generate_lycee_bulletin
 from utils.pdf_utils import merge_pdfs
+from utils.system_printing import (
+    get_available_printer_names,
+    get_default_printer_name,
+    get_printing_diagnostic,
+    open_file,
+    send_file_to_printer,
+)
 from utils.table_style import setup_table
 
 
@@ -250,7 +254,28 @@ class LyceeBulletinsPage(QWidget):
             conn.close()
 
     def preview_bulletin(self):
-        self.print_bulletin()
+        selected_row = self.table.currentRow()
+        term_id = self.term_input.currentData()
+
+        if selected_row == -1:
+            QMessageBox.warning(self, "Validation", "Sélectionnez un élève.")
+            return
+        if term_id is None:
+            QMessageBox.warning(self, "Validation", "Sélectionnez un trimestre.")
+            return
+
+        student_id_item = self.table.item(selected_row, 0)
+        if not student_id_item:
+            QMessageBox.warning(self, "Erreur", "Élève invalide.")
+            return
+
+        student_id = int(student_id_item.text())
+        try:
+            pdf_path = generate_lycee_bulletin(student_id, term_id)
+            self.open_pdf(pdf_path)
+            QMessageBox.information(self, "Aperçu PDF", f"Aperçu généré : {pdf_path}")
+        except Exception as e:
+            QMessageBox.critical(self, "Erreur", f"Génération bulletin impossible : {e}")
 
     def print_bulletin(self):
         selected_row = self.table.currentRow()
@@ -271,8 +296,7 @@ class LyceeBulletinsPage(QWidget):
         student_id = int(student_id_item.text())
         try:
             pdf_path = generate_lycee_bulletin(student_id, term_id)
-            self.open_pdf(pdf_path)
-            QMessageBox.information(self, "Succès", f"Bulletin généré : {pdf_path}")
+            self.print_pdf_file(pdf_path, "Bulletin envoyé à l'impression.")
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Génération bulletin impossible : {e}")
 
@@ -304,26 +328,77 @@ class LyceeBulletinsPage(QWidget):
 
             merged_output = f"bulletins/lycee/{class_label}_{term_label}_classe_complete.pdf"
             merged_pdf = merge_pdfs(generated_files, merged_output)
-            self.open_pdf(merged_pdf)
-            QMessageBox.information(
-                self,
-                "Succès",
-                f"{len(generated_files)} bulletin(s) généré(s) et fusionné(s).\nFichier : {merged_pdf}"
+            self.print_pdf_file(
+                merged_pdf,
+                f"{len(generated_files)} bulletin(s) généré(s) et fusionné(s)."
             )
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Génération des bulletins impossible : {e}")
 
     def open_pdf(self, filepath):
         try:
-            if sys.platform.startswith("win"):
-                os.startfile(filepath)
-            elif sys.platform.startswith("darwin"):
-                subprocess.run(["open", filepath], check=False)
-            else:
-                subprocess.run(["xdg-open", filepath], check=False)
+            open_file(filepath)
         except Exception as e:
             QMessageBox.warning(
                 self,
                 "Avertissement",
                 f"Bulletin généré, mais impossible de l'ouvrir : {e}"
             )
+
+    def print_pdf_file(self, filepath, prefix_message):
+        printer_names = get_available_printer_names()
+        if not printer_names:
+            self.open_pdf(filepath)
+            QMessageBox.warning(
+                self,
+                "Impression indisponible",
+                (
+                    f"{get_printing_diagnostic()}\n\n"
+                    "Le PDF a quand même été ouvert pour que vous puissiez l'enregistrer "
+                    "ou l'imprimer plus tard sur un poste configuré."
+                ),
+            )
+            return
+
+        printer_name = self.choose_printer(printer_names)
+        if not printer_name:
+            return
+
+        try:
+            result_message = send_file_to_printer(filepath, printer_name)
+            QMessageBox.information(
+                self,
+                "Impression",
+                f"{prefix_message}\n\nImprimante : {printer_name}\n{result_message}",
+            )
+        except Exception as e:
+            self.open_pdf(filepath)
+            QMessageBox.warning(
+                self,
+                "Impression",
+                (
+                    f"Envoi direct à l'imprimante impossible : {e}\n\n"
+                    "Le PDF a été ouvert pour que vous puissiez essayer une impression manuelle."
+                ),
+            )
+
+    def choose_printer(self, printer_names):
+        if len(printer_names) == 1:
+            return printer_names[0]
+
+        default_printer = get_default_printer_name()
+        default_index = 0
+        if default_printer in printer_names:
+            default_index = printer_names.index(default_printer)
+
+        printer_name, accepted = QInputDialog.getItem(
+            self,
+            "Choisir l'imprimante",
+            "Imprimante :",
+            printer_names,
+            default_index,
+            False,
+        )
+        if not accepted or not printer_name:
+            return None
+        return printer_name

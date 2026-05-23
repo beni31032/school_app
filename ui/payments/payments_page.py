@@ -1,6 +1,4 @@
 import os
-import sys
-import subprocess
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QPushButton,
@@ -12,6 +10,7 @@ from PyQt6.QtCore import Qt
 from database.connection import get_connection
 from ui.payments.add_payment_dialog import AddPaymentDialog
 from ui.payments.payment_details_dialog import PaymentDetailsDialog
+from utils.qt_printing import print_pdf_file
 from utils.receipt_generator import generate_receipt
 from utils.table_style import setup_table
 
@@ -366,21 +365,6 @@ class PaymentsPage(QWidget):
         )
         dialog.exec()
 
-    def open_pdf(self, filepath):
-        try:
-            if sys.platform.startswith("win"):
-                os.startfile(filepath)
-            elif sys.platform.startswith("darwin"):
-                subprocess.run(["open", filepath], check=False)
-            else:
-                subprocess.run(["xdg-open", filepath], check=False)
-        except Exception as e:
-            QMessageBox.warning(
-                self,
-                "Avertissement",
-                f"Reçu régénéré, mais impossible de l'ouvrir : {e}"
-            )
-
     def reprint_receipt(self):
         selected = self.table.currentRow()
 
@@ -397,12 +381,6 @@ class PaymentsPage(QWidget):
 
         try:
             pdf_path = generate_receipt(payment_id)
-            self.open_pdf(pdf_path)
-
-            QMessageBox.information(
-                self,
-                "Succès",
-                f"Reçu régénéré : {pdf_path}"
-            )
+            print_pdf_file(self, pdf_path, "Reçu envoyé à l'impression.")
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Réimpression impossible : {e}")

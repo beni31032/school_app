@@ -1,6 +1,3 @@
-import os
-import sys
-import subprocess
 from datetime import date
 
 from PyQt6.QtWidgets import (
@@ -11,6 +8,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 
 from database.connection import get_connection
+from utils.qt_printing import print_pdf_file
 from utils.receipt_generator import generate_receipt
 
 
@@ -518,11 +516,9 @@ class AddPaymentDialog(QDialog):
             conn.commit()
 
             pdf_path = generate_receipt(payment_id)
-            self.open_pdf(pdf_path)
-
-            QMessageBox.information(
+            print_pdf_file(
                 self,
-                "Succès",
+                pdf_path,
                 f"Paiement enregistré avec succès.\nReçu : {receipt_number}"
             )
             self.accept()
@@ -532,18 +528,3 @@ class AddPaymentDialog(QDialog):
             QMessageBox.critical(self, "Erreur", f"Enregistrement impossible : {e}")
         finally:
             conn.close()
-
-    def open_pdf(self, filepath):
-        try:
-            if sys.platform.startswith("win"):
-                os.startfile(filepath)
-            elif sys.platform.startswith("darwin"):
-                subprocess.run(["open", filepath], check=False)
-            else:
-                subprocess.run(["xdg-open", filepath], check=False)
-        except Exception as e:
-            QMessageBox.warning(
-                self,
-                "Avertissement",
-                f"Paiement enregistré, mais impossible d'ouvrir le reçu : {e}"
-            )

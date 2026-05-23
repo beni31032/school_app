@@ -1,5 +1,31 @@
 from database.connection import get_connection
 
+_CLASS_LEVEL_CACHE: dict[int, str] = {}
+_TERM_SCHOOL_YEAR_CACHE: dict[int, int] = {}
+_OPTIONAL_SUBJECT_CACHE: dict[tuple[int, int], bool] = {}
+_TERM_AVG_CACHE: dict[tuple[int, int, int], float] = {}
+_GENERAL_RANKINGS_CACHE: dict[tuple[int, int, int], tuple[dict[int, int], int]] = {}
+_SUBJECT_RANKINGS_CACHE: dict[tuple[int, int, int, int], dict[int, int]] = {}
+_CLASS_STATS_CACHE: dict[tuple[int, int, int], dict] = {}
+_SCHOOL_YEAR_TERMS_CACHE: dict[int, list[int]] = {}
+_ANNUAL_AVG_MAP_CACHE: dict[tuple[int, int], dict[int, float]] = {}
+_ANNUAL_RANKINGS_CACHE: dict[tuple[int, int], dict[int, int]] = {}
+_BULLETIN_NUMBER_CACHE: dict[tuple[int, int], dict[int, int]] = {}
+
+
+def clear_lycee_bulletin_caches() -> None:
+    _CLASS_LEVEL_CACHE.clear()
+    _TERM_SCHOOL_YEAR_CACHE.clear()
+    _OPTIONAL_SUBJECT_CACHE.clear()
+    _TERM_AVG_CACHE.clear()
+    _GENERAL_RANKINGS_CACHE.clear()
+    _SUBJECT_RANKINGS_CACHE.clear()
+    _CLASS_STATS_CACHE.clear()
+    _SCHOOL_YEAR_TERMS_CACHE.clear()
+    _ANNUAL_AVG_MAP_CACHE.clear()
+    _ANNUAL_RANKINGS_CACHE.clear()
+    _BULLETIN_NUMBER_CACHE.clear()
+
 
 def _is_student_based_optional_level(level_name: str) -> bool:
     normalized = (level_name or "").strip().lower()
@@ -8,6 +34,8 @@ def _is_student_based_optional_level(level_name: str) -> bool:
 
 
 def _get_class_level(class_id: int) -> str:
+    if class_id in _CLASS_LEVEL_CACHE:
+        return _CLASS_LEVEL_CACHE[class_id]
     conn = get_connection()
     if not conn:
         raise Exception("Connexion base impossible")
@@ -15,7 +43,9 @@ def _get_class_level(class_id: int) -> str:
         cursor = conn.cursor()
         cursor.execute("SELECT COALESCE(level, '') FROM classes WHERE id = %s", (class_id,))
         row = cursor.fetchone()
-        return row[0] if row else ""
+        level = row[0] if row else ""
+        _CLASS_LEVEL_CACHE[class_id] = level
+        return level
     finally:
         conn.close()
 
@@ -25,6 +55,8 @@ def _is_student_based_optional_class(class_id: int) -> bool:
 
 
 def _get_term_school_year_id(term_id: int) -> int:
+    if term_id in _TERM_SCHOOL_YEAR_CACHE:
+        return _TERM_SCHOOL_YEAR_CACHE[term_id]
     conn = get_connection()
     if not conn:
         raise Exception("Connexion base impossible")
@@ -34,12 +66,17 @@ def _get_term_school_year_id(term_id: int) -> int:
         row = cursor.fetchone()
         if not row:
             raise Exception("Trimestre introuvable.")
-        return int(row[0])
+        school_year_id = int(row[0])
+        _TERM_SCHOOL_YEAR_CACHE[term_id] = school_year_id
+        return school_year_id
     finally:
         conn.close()
 
 
 def _is_optional_subject_for_class(class_id: int, subject_id: int) -> bool:
+    cache_key = (class_id, subject_id)
+    if cache_key in _OPTIONAL_SUBJECT_CACHE:
+        return _OPTIONAL_SUBJECT_CACHE[cache_key]
     conn = get_connection()
     if not conn:
         raise Exception("Connexion base impossible")
@@ -56,7 +93,9 @@ def _is_optional_subject_for_class(class_id: int, subject_id: int) -> bool:
             (class_id, subject_id),
         )
         row = cursor.fetchone()
-        return bool(row and row[0] == "FACULTATIVE")
+        is_optional = bool(row and row[0] == "FACULTATIVE")
+        _OPTIONAL_SUBJECT_CACHE[cache_key] = is_optional
+        return is_optional
     finally:
         conn.close()
 
@@ -86,6 +125,9 @@ def get_general_observation(avg: float) -> str:
 
 
 def get_term_average_for_student(class_id: int, student_id: int, term_id: int) -> float:
+    cache_key = (class_id, student_id, term_id)
+    if cache_key in _TERM_AVG_CACHE:
+        return _TERM_AVG_CACHE[cache_key]
     conn = get_connection()
     if not conn:
         raise Exception("Connexion base impossible")
@@ -139,13 +181,19 @@ def get_term_average_for_student(class_id: int, student_id: int, term_id: int) -
         """
         cursor.execute(sql, params)
         row = cursor.fetchone()
-        return float(row[0] or 0)
+        average = float(row[0] or 0)
+        _TERM_AVG_CACHE[cache_key] = average
+        return average
 
     finally:
         conn.close()
 
 
-def get_general_rank(class_id: int, student_id: int, term_id: int, school_year_id: int) -> tuple[int, int]:
+def _get_general_ranking_map(class_id: int, term_id: int, school_year_id: int) -> tuple[dict[int, int], int]:
+    cache_key = (class_id, term_id, school_year_id)
+    if cache_key in _GENERAL_RANKINGS_CACHE:
+        return _GENERAL_RANKINGS_CACHE[cache_key]
+
     conn = get_connection()
     if not conn:
         raise Exception("Connexion base impossible")
@@ -205,20 +253,18 @@ def get_general_rank(class_id: int, student_id: int, term_id: int, school_year_i
             ORDER BY general_average DESC, st.student_id
         """
         cursor.execute(sql, params)
-
         rows = cursor.fetchall()
-        effectif = len(rows)
-        rank = 0
-
-        for index, row in enumerate(rows, start=1):
-            if row[0] == student_id:
-                rank = index
-                break
-
-        return rank, effectif
-
+        ranking_map = {row[0]: index for index, row in enumerate(rows, start=1)}
+        result = (ranking_map, len(rows))
+        _GENERAL_RANKINGS_CACHE[cache_key] = result
+        return result
     finally:
         conn.close()
+
+
+def get_general_rank(class_id: int, student_id: int, term_id: int, school_year_id: int) -> tuple[int, int]:
+    ranking_map, effectif = _get_general_ranking_map(class_id, term_id, school_year_id)
+    return ranking_map.get(student_id, 0), effectif
 
 
 def get_subject_rank(
@@ -228,63 +274,65 @@ def get_subject_rank(
     term_id: int,
     school_year_id: int
 ) -> int:
-    conn = get_connection()
-    if not conn:
-        raise Exception("Connexion base impossible")
+    cache_key = (class_id, subject_id, term_id, school_year_id)
+    if cache_key not in _SUBJECT_RANKINGS_CACHE:
+        conn = get_connection()
+        if not conn:
+            raise Exception("Connexion base impossible")
 
-    try:
-        cursor = conn.cursor()
-        sql = """
-            SELECT
-                e.student_id,
-                ROUND((
-                    COALESCE(MAX(CASE WHEN g.grade_type = 'classe' THEN g.value END), 0) +
-                    COALESCE(MAX(CASE WHEN g.grade_type = 'compo' THEN g.value END), 0)
-                ) / 2.0, 2) AS subject_avg
-            FROM enrollments e
-            JOIN students st ON st.id = e.student_id
-            LEFT JOIN grades g
-                ON g.student_id = e.student_id
-               AND g.subject_id = %s
-               AND g.term_id = %s
-            WHERE e.class_id = %s
-              AND e.school_year_id = %s
-              AND st.is_active = TRUE
-        """
-        params = [subject_id, term_id, class_id, school_year_id]
-        if _is_student_based_optional_class(class_id) and _is_optional_subject_for_class(class_id, subject_id):
-            sql += """
-              AND EXISTS (
-                    SELECT 1
-                    FROM student_optional_subjects sos
-                    JOIN class_subjects cs
-                      ON cs.id = sos.class_subject_id
-                    WHERE sos.student_id = e.student_id
-                      AND sos.school_year_id = %s
-                      AND cs.class_id = %s
-                      AND cs.subject_id = %s
-              )
+        try:
+            cursor = conn.cursor()
+            sql = """
+                SELECT
+                    e.student_id,
+                    ROUND((
+                        COALESCE(MAX(CASE WHEN g.grade_type = 'classe' THEN g.value END), 0) +
+                        COALESCE(MAX(CASE WHEN g.grade_type = 'compo' THEN g.value END), 0)
+                    ) / 2.0, 2) AS subject_avg
+                FROM enrollments e
+                JOIN students st ON st.id = e.student_id
+                LEFT JOIN grades g
+                    ON g.student_id = e.student_id
+                   AND g.subject_id = %s
+                   AND g.term_id = %s
+                WHERE e.class_id = %s
+                  AND e.school_year_id = %s
+                  AND st.is_active = TRUE
             """
-            params.extend([school_year_id, class_id, subject_id])
-        sql += """
-            GROUP BY e.student_id
-            ORDER BY subject_avg DESC, e.student_id
-        """
-        cursor.execute(sql, params)
+            params = [subject_id, term_id, class_id, school_year_id]
+            if _is_student_based_optional_class(class_id) and _is_optional_subject_for_class(class_id, subject_id):
+                sql += """
+                  AND EXISTS (
+                        SELECT 1
+                        FROM student_optional_subjects sos
+                        JOIN class_subjects cs
+                          ON cs.id = sos.class_subject_id
+                        WHERE sos.student_id = e.student_id
+                          AND sos.school_year_id = %s
+                          AND cs.class_id = %s
+                          AND cs.subject_id = %s
+                  )
+                """
+                params.extend([school_year_id, class_id, subject_id])
+            sql += """
+                GROUP BY e.student_id
+                ORDER BY subject_avg DESC, e.student_id
+            """
+            cursor.execute(sql, params)
+            rows = cursor.fetchall()
+            _SUBJECT_RANKINGS_CACHE[cache_key] = {
+                row[0]: index for index, row in enumerate(rows, start=1)
+            }
+        finally:
+            conn.close()
 
-        rows = cursor.fetchall()
-
-        for index, row in enumerate(rows, start=1):
-            if row[0] == student_id:
-                return index
-
-        return 0
-
-    finally:
-        conn.close()
+    return _SUBJECT_RANKINGS_CACHE[cache_key].get(student_id, 0)
 
 
 def get_class_statistics(class_id: int, term_id: int, school_year_id: int) -> dict:
+    cache_key = (class_id, term_id, school_year_id)
+    if cache_key in _CLASS_STATS_CACHE:
+        return _CLASS_STATS_CACHE[cache_key]
     conn = get_connection()
     if not conn:
         raise Exception("Connexion base impossible")
@@ -350,17 +398,21 @@ def get_class_statistics(class_id: int, term_id: int, school_year_id: int) -> di
 
         row = cursor.fetchone()
 
-        return {
+        stats = {
             "highest_average": round(float(row[0] or 0), 2),
             "lowest_average": round(float(row[1] or 0), 2),
             "class_average": round(float(row[2] or 0), 2),
         }
+        _CLASS_STATS_CACHE[cache_key] = stats
+        return stats
 
     finally:
         conn.close()
 
 
 def get_school_year_term_ids(school_year_id: int) -> list[int]:
+    if school_year_id in _SCHOOL_YEAR_TERMS_CACHE:
+        return _SCHOOL_YEAR_TERMS_CACHE[school_year_id]
     conn = get_connection()
     if not conn:
         raise Exception("Connexion base impossible")
@@ -376,23 +428,18 @@ def get_school_year_term_ids(school_year_id: int) -> list[int]:
             """,
             (school_year_id,)
         )
-        return [row[0] for row in cursor.fetchall()]
+        term_ids = [row[0] for row in cursor.fetchall()]
+        _SCHOOL_YEAR_TERMS_CACHE[school_year_id] = term_ids
+        return term_ids
     finally:
         conn.close()
 
 
-def get_annual_average(class_id: int, student_id: int, school_year_id: int) -> float:
-    term_ids = get_school_year_term_ids(school_year_id)
-    term_avgs = [get_term_average_for_student(class_id, student_id, tid) for tid in term_ids]
-    existing = [avg for avg in term_avgs if avg > 0]
+def _get_annual_average_map(class_id: int, school_year_id: int) -> dict[int, float]:
+    cache_key = (class_id, school_year_id)
+    if cache_key in _ANNUAL_AVG_MAP_CACHE:
+        return _ANNUAL_AVG_MAP_CACHE[cache_key]
 
-    if not existing:
-        return 0.0
-
-    return round(sum(existing) / len(existing), 2)
-
-
-def get_annual_rank(class_id: int, student_id: int, school_year_id: int) -> int:
     conn = get_connection()
     if not conn:
         raise Exception("Connexion base impossible")
@@ -409,28 +456,42 @@ def get_annual_rank(class_id: int, student_id: int, school_year_id: int) -> int:
               AND s.is_active = TRUE
             ORDER BY s.id
             """,
-            (class_id, school_year_id)
+            (class_id, school_year_id),
         )
         student_ids = [row[0] for row in cursor.fetchall()]
-
-        annuals = []
-        for sid in student_ids:
-            annual_avg = get_annual_average(class_id, sid, school_year_id)
-            annuals.append((sid, annual_avg))
-
-        annuals.sort(key=lambda x: (-x[1], x[0]))
-
-        for index, (sid, _) in enumerate(annuals, start=1):
-            if sid == student_id:
-                return index
-
-        return 0
-
     finally:
         conn.close()
 
+    term_ids = get_school_year_term_ids(school_year_id)
+    averages: dict[int, float] = {}
+    for sid in student_ids:
+        term_avgs = [get_term_average_for_student(class_id, sid, tid) for tid in term_ids]
+        existing = [avg for avg in term_avgs if avg > 0]
+        averages[sid] = round(sum(existing) / len(existing), 2) if existing else 0.0
+
+    _ANNUAL_AVG_MAP_CACHE[cache_key] = averages
+    return averages
+
+
+def get_annual_average(class_id: int, student_id: int, school_year_id: int) -> float:
+    return _get_annual_average_map(class_id, school_year_id).get(student_id, 0.0)
+
+
+def get_annual_rank(class_id: int, student_id: int, school_year_id: int) -> int:
+    cache_key = (class_id, school_year_id)
+    if cache_key not in _ANNUAL_RANKINGS_CACHE:
+        averages = _get_annual_average_map(class_id, school_year_id)
+        ranked = sorted(averages.items(), key=lambda item: (-item[1], item[0]))
+        _ANNUAL_RANKINGS_CACHE[cache_key] = {
+            sid: index for index, (sid, _avg) in enumerate(ranked, start=1)
+        }
+    return _ANNUAL_RANKINGS_CACHE[cache_key].get(student_id, 0)
+
 
 def get_bulletin_number(class_id: int, student_id: int, school_year_id: int) -> int:
+    cache_key = (class_id, school_year_id)
+    if cache_key in _BULLETIN_NUMBER_CACHE:
+        return _BULLETIN_NUMBER_CACHE[cache_key].get(student_id, 0)
     conn = get_connection()
     if not conn:
         raise Exception("Connexion base impossible")
@@ -450,12 +511,9 @@ def get_bulletin_number(class_id: int, student_id: int, school_year_id: int) -> 
             (class_id, school_year_id)
         )
         rows = cursor.fetchall()
-
-        for index, row in enumerate(rows, start=1):
-            if row[0] == student_id:
-                return index
-
-        return 0
+        number_map = {row[0]: index for index, row in enumerate(rows, start=1)}
+        _BULLETIN_NUMBER_CACHE[cache_key] = number_map
+        return number_map.get(student_id, 0)
 
     finally:
         conn.close()

@@ -1,6 +1,3 @@
-import os
-import subprocess
-import sys
 from datetime import datetime
 
 from PyQt6.QtWidgets import (
@@ -28,6 +25,7 @@ from database.connection import get_connection
 from ui.timetables.add_timetable_dialog import AddTimetableDialog
 from ui.timetables.edit_timetable_dialog import EditTimetableDialog
 from ui.timetables.timetable_details_dialog import TimetableDetailsDialog
+from utils.qt_printing import preview_pdf_file, print_pdf_file
 from utils.subject_service import ensure_subject_schema
 from utils.table_style import setup_table
 from utils.teacher_service import ensure_teacher_schema
@@ -750,18 +748,13 @@ class TimetablesPage(QWidget):
     def preview_weekly_schedule_pdf(self):
         try:
             filepath = self._generate_weekly_schedule_pdf()
-            self._open_file(filepath)
-            QMessageBox.information(self, "Succès", f"Aperçu PDF généré : {filepath}")
+            preview_pdf_file(self, filepath)
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Aperçu impossible : {e}")
 
     def print_weekly_schedule(self):
-        self.preview_weekly_schedule_pdf()
-
-    def _open_file(self, filepath):
-        if sys.platform.startswith("win"):
-            os.startfile(filepath)
-        elif sys.platform.startswith("darwin"):
-            subprocess.run(["open", filepath], check=False)
-        else:
-            subprocess.run(["xdg-open", filepath], check=False)
+        try:
+            filepath = self._generate_weekly_schedule_pdf()
+            print_pdf_file(self, filepath, "Emploi du temps envoyé à l'impression.")
+        except Exception as e:
+            QMessageBox.critical(self, "Erreur", f"Impression impossible : {e}")

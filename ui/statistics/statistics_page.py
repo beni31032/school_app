@@ -1,6 +1,4 @@
 import os
-import subprocess
-import sys
 from datetime import datetime
 
 from PyQt6.QtCore import Qt
@@ -28,6 +26,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 
 from database.connection import get_connection
 from utils.expense_service import ensure_expenses_table
+from utils.qt_printing import preview_pdf_file, print_pdf_file
 from utils.salary_service import ensure_salary_table
 from utils.teacher_service import ensure_teacher_schema
 from utils.table_style import setup_table
@@ -737,18 +736,13 @@ class StatisticsPage(QWidget):
     def preview_pdf(self):
         try:
             filepath = self._generate_pdf()
-            self._open_file(filepath)
-            QMessageBox.information(self, "Succès", f"Aperçu PDF généré : {filepath}")
+            preview_pdf_file(self, filepath)
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Aperçu impossible : {e}")
 
     def print_current(self):
-        self.preview_pdf()
-
-    def _open_file(self, filepath):
-        if sys.platform.startswith("win"):
-            os.startfile(filepath)
-        elif sys.platform.startswith("darwin"):
-            subprocess.run(["open", filepath], check=False)
-        else:
-            subprocess.run(["xdg-open", filepath], check=False)
+        try:
+            filepath = self._generate_pdf()
+            print_pdf_file(self, filepath, "Statistiques envoyées à l'impression.")
+        except Exception as e:
+            QMessageBox.critical(self, "Erreur", f"Impression impossible : {e}")
