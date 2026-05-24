@@ -124,6 +124,30 @@ def get_general_observation(avg: float) -> str:
     return "Insuffisant"
 
 
+def _compute_optional_bonus(subjects: list[dict]) -> tuple[float, int]:
+    optional_subjects = [subject for subject in subjects if subject.get("is_optional")]
+    if not optional_subjects:
+        return 0.0, 0
+
+    optional_total_coef = sum(int(subject.get("coefficient", 0) or 0) for subject in optional_subjects)
+    optional_total_notes = sum(float(subject.get("note_def", 0) or 0) for subject in optional_subjects)
+    if optional_total_coef <= 0:
+        return 0.0, 0
+
+    optional_average = round(optional_total_notes / optional_total_coef, 2)
+    bonus = max(int(optional_average) - 10, 0)
+    return optional_average, bonus
+
+
+def _compute_main_totals(subjects: list[dict]) -> tuple[int, float, float, int]:
+    mandatory_subjects = [subject for subject in subjects if not subject.get("is_optional")]
+    main_total_coef = sum(int(subject.get("coefficient", 0) or 0) for subject in mandatory_subjects)
+    main_total_notes = round(sum(float(subject.get("note_def", 0) or 0) for subject in mandatory_subjects), 2)
+    _optional_average, optional_bonus = _compute_optional_bonus(subjects)
+    final_total_notes = round(main_total_notes + optional_bonus, 2)
+    return main_total_coef, main_total_notes, final_total_notes, optional_bonus
+
+
 def get_term_average_for_student(class_id: int, student_id: int, term_id: int) -> float:
     cache_key = (class_id, student_id, term_id)
     if cache_key in _TERM_AVG_CACHE:
@@ -137,51 +161,53 @@ def get_term_average_for_student(class_id: int, student_id: int, term_id: int) -
         student_based_optional = _is_student_based_optional_class(class_id)
         school_year_id = _get_term_school_year_id(term_id)
         sql = """
-            WITH subject_averages AS (
-                SELECT
-                    ss.subject_id,
-                    ss.coefficient,
-                    ((ss.classe_note + ss.compo_note) / 2.0) AS moy_trim,
-                    (((ss.classe_note + ss.compo_note) / 2.0) * ss.coefficient) AS note_def
-                FROM (
-                    SELECT
-                        cs.subject_id,
-                        cs.coefficient,
-                        COALESCE(MAX(CASE WHEN g.grade_type = 'classe' THEN g.value END), 0) AS classe_note,
-                        COALESCE(MAX(CASE WHEN g.grade_type = 'compo' THEN g.value END), 0) AS compo_note
-                    FROM class_subjects cs
-                    LEFT JOIN grades g
-                        ON g.subject_id = cs.subject_id
-                       AND g.student_id = %s
-                       AND g.term_id = %s
-                    WHERE cs.class_id = %s
+            SELECT
+                cs.coefficient,
+                COALESCE(MAX(CASE WHEN g.grade_type = 'classe' THEN g.value END), 0) AS classe_note,
+                COALESCE(MAX(CASE WHEN g.grade_type = 'compo' THEN g.value END), 0) AS compo_note,
+                COALESCE(cs.subject_type, 'OBLIGATOIRE') AS subject_type
+            FROM class_subjects cs
+            LEFT JOIN grades g
+                ON g.subject_id = cs.subject_id
+               AND g.student_id = %s
+               AND g.term_id = %s
+            WHERE cs.class_id = %s
         """
         params = [student_id, term_id, class_id]
         if student_based_optional:
             sql += """
-                      AND (
-                            COALESCE(cs.subject_type, 'OBLIGATOIRE') <> 'FACULTATIVE'
-                            OR EXISTS (
-                                SELECT 1
-                                FROM student_optional_subjects sos
-                                WHERE sos.student_id = %s
-                                  AND sos.class_subject_id = cs.id
-                                  AND sos.school_year_id = %s
-                            )
-                      )
+              AND (
+                    COALESCE(cs.subject_type, 'OBLIGATOIRE') <> 'FACULTATIVE'
+                    OR EXISTS (
+                        SELECT 1
+                        FROM student_optional_subjects sos
+                        WHERE sos.student_id = %s
+                          AND sos.class_subject_id = cs.id
+                          AND sos.school_year_id = %s
+                    )
+              )
             """
             params.extend([student_id, school_year_id])
         sql += """
-                    GROUP BY cs.subject_id, cs.coefficient
-                ) ss
-            )
-            SELECT
-                COALESCE(SUM(note_def) / NULLIF(SUM(coefficient), 0), 0)
-            FROM subject_averages
+            GROUP BY cs.id, cs.coefficient, cs.subject_type
         """
         cursor.execute(sql, params)
-        row = cursor.fetchone()
-        average = float(row[0] or 0)
+        rows = cursor.fetchall()
+        subjects = []
+        for coefficient, classe_note, compo_note, subject_type in rows:
+            coefficient = int(coefficient or 1)
+            classe_note = float(classe_note or 0)
+            compo_note = float(compo_note or 0)
+            moy_trim = round((classe_note + compo_note) / 2.0, 2)
+            note_def = round(moy_trim * coefficient, 2)
+            subjects.append({
+                "coefficient": coefficient,
+                "note_def": note_def,
+                "is_optional": subject_type == "FACULTATIVE",
+            })
+
+        main_total_coef, _main_total_notes, final_total_notes, _optional_bonus = _compute_main_totals(subjects)
+        average = round(final_total_notes / main_total_coef, 2) if main_total_coef > 0 else 0.0
         _TERM_AVG_CACHE[cache_key] = average
         return average
 
@@ -200,62 +226,23 @@ def _get_general_ranking_map(class_id: int, term_id: int, school_year_id: int) -
 
     try:
         cursor = conn.cursor()
-        student_based_optional = _is_student_based_optional_class(class_id)
-        sql = """
-            WITH student_subjects AS (
-                SELECT
-                    e.student_id,
-                    cs.subject_id,
-                    cs.coefficient,
-                    COALESCE(MAX(CASE WHEN g.grade_type = 'classe' THEN g.value END), 0) AS classe_note,
-                    COALESCE(MAX(CASE WHEN g.grade_type = 'compo' THEN g.value END), 0) AS compo_note
-                FROM enrollments e
-                JOIN students st ON st.id = e.student_id
-                JOIN class_subjects cs ON cs.class_id = e.class_id
-                LEFT JOIN grades g
-                    ON g.student_id = e.student_id
-                   AND g.subject_id = cs.subject_id
-                   AND g.term_id = %s
-                WHERE e.class_id = %s
-                  AND e.school_year_id = %s
-                  AND st.is_active = TRUE
-        """
-        params = [term_id, class_id, school_year_id]
-        if student_based_optional:
-            sql += """
-                  AND (
-                        COALESCE(cs.subject_type, 'OBLIGATOIRE') <> 'FACULTATIVE'
-                        OR EXISTS (
-                            SELECT 1
-                            FROM student_optional_subjects sos
-                            WHERE sos.student_id = e.student_id
-                              AND sos.class_subject_id = cs.id
-                              AND sos.school_year_id = %s
-                        )
-                  )
+        cursor.execute(
             """
-            params.append(school_year_id)
-        sql += """
-                GROUP BY e.student_id, cs.subject_id, cs.coefficient
-            ),
-            student_totals AS (
-                SELECT
-                    student_id,
-                    SUM(((classe_note + compo_note) / 2.0) * coefficient) AS total_notes,
-                    SUM(coefficient) AS total_coef
-                FROM student_subjects
-                GROUP BY student_id
-            )
-            SELECT
-                st.student_id,
-                ROUND(COALESCE(st.total_notes / NULLIF(st.total_coef, 0), 0), 2) AS general_average
-            FROM student_totals st
-            ORDER BY general_average DESC, st.student_id
-        """
-        cursor.execute(sql, params)
-        rows = cursor.fetchall()
-        ranking_map = {row[0]: index for index, row in enumerate(rows, start=1)}
-        result = (ranking_map, len(rows))
+            SELECT e.student_id
+            FROM enrollments e
+            JOIN students s ON s.id = e.student_id
+            WHERE e.class_id = %s
+              AND e.school_year_id = %s
+              AND s.is_active = TRUE
+            ORDER BY e.student_id
+            """,
+            (class_id, school_year_id),
+        )
+        student_ids = [row[0] for row in cursor.fetchall()]
+        averages = [(sid, get_term_average_for_student(class_id, sid, term_id)) for sid in student_ids]
+        averages.sort(key=lambda item: (-item[1], item[0]))
+        ranking_map = {sid: index for index, (sid, _avg) in enumerate(averages, start=1)}
+        result = (ranking_map, len(student_ids))
         _GENERAL_RANKINGS_CACHE[cache_key] = result
         return result
     finally:
@@ -339,69 +326,31 @@ def get_class_statistics(class_id: int, term_id: int, school_year_id: int) -> di
 
     try:
         cursor = conn.cursor()
-        student_based_optional = _is_student_based_optional_class(class_id)
-        sql = """
-            WITH student_subjects AS (
-                SELECT
-                    e.student_id,
-                    cs.subject_id,
-                    cs.coefficient,
-                    COALESCE(MAX(CASE WHEN g.grade_type = 'classe' THEN g.value END), 0) AS classe_note,
-                    COALESCE(MAX(CASE WHEN g.grade_type = 'compo' THEN g.value END), 0) AS compo_note
-                FROM enrollments e
-                JOIN students st ON st.id = e.student_id
-                JOIN class_subjects cs ON cs.class_id = e.class_id
-                LEFT JOIN grades g
-                    ON g.student_id = e.student_id
-                   AND g.subject_id = cs.subject_id
-                   AND g.term_id = %s
-                WHERE e.class_id = %s
-                  AND e.school_year_id = %s
-                  AND st.is_active = TRUE
-        """
-        params = [term_id, class_id, school_year_id]
-        if student_based_optional:
-            sql += """
-                  AND (
-                        COALESCE(cs.subject_type, 'OBLIGATOIRE') <> 'FACULTATIVE'
-                        OR EXISTS (
-                            SELECT 1
-                            FROM student_optional_subjects sos
-                            WHERE sos.student_id = e.student_id
-                              AND sos.class_subject_id = cs.id
-                              AND sos.school_year_id = %s
-                        )
-                  )
+        cursor.execute(
             """
-            params.append(school_year_id)
-        sql += """
-                GROUP BY e.student_id, cs.subject_id, cs.coefficient
-            ),
-            student_averages AS (
-                SELECT
-                    student_id,
-                    ROUND(
-                        SUM(((classe_note + compo_note) / 2.0) * coefficient) /
-                        NULLIF(SUM(coefficient), 0),
-                        2
-                    ) AS avg_general
-                FROM student_subjects
-                GROUP BY student_id
-            )
-            SELECT
-                COALESCE(MAX(avg_general), 0),
-                COALESCE(MIN(avg_general), 0),
-                COALESCE(AVG(avg_general), 0)
-            FROM student_averages
-        """
-        cursor.execute(sql, params)
-
-        row = cursor.fetchone()
+            SELECT e.student_id
+            FROM enrollments e
+            JOIN students s ON s.id = e.student_id
+            WHERE e.class_id = %s
+              AND e.school_year_id = %s
+              AND s.is_active = TRUE
+            ORDER BY e.student_id
+            """,
+            (class_id, school_year_id),
+        )
+        student_ids = [row[0] for row in cursor.fetchall()]
+        averages = [get_term_average_for_student(class_id, sid, term_id) for sid in student_ids]
+        if averages:
+            highest = max(averages)
+            lowest = min(averages)
+            average = sum(averages) / len(averages)
+        else:
+            highest = lowest = average = 0.0
 
         stats = {
-            "highest_average": round(float(row[0] or 0), 2),
-            "lowest_average": round(float(row[1] or 0), 2),
-            "class_average": round(float(row[2] or 0), 2),
+            "highest_average": round(float(highest or 0), 2),
+            "lowest_average": round(float(lowest or 0), 2),
+            "class_average": round(float(average or 0), 2),
         }
         _CLASS_STATS_CACHE[cache_key] = stats
         return stats
@@ -599,6 +548,7 @@ def get_lycee_bulletin_data(student_id: int, term_id: int) -> dict:
                 cs.coefficient,
                 COALESCE(MAX(CASE WHEN g.grade_type = 'classe' THEN g.value END), 0) AS classe_note,
                 COALESCE(MAX(CASE WHEN g.grade_type = 'compo' THEN g.value END), 0) AS compo_note,
+                COALESCE(cs.subject_type, 'OBLIGATOIRE') AS subject_type,
                 COALESCE(ta.teacher_id, 0),
                 COALESCE(tr.last_name || ' ' || tr.first_name, '')
             FROM class_subjects cs
@@ -636,6 +586,7 @@ def get_lycee_bulletin_data(student_id: int, term_id: int) -> dict:
                 cs.subject_id,
                 sb.name,
                 cs.coefficient,
+                cs.subject_type,
                 ta.teacher_id,
                 tr.last_name,
                 tr.first_name
@@ -646,8 +597,6 @@ def get_lycee_bulletin_data(student_id: int, term_id: int) -> dict:
         subject_rows = cursor.fetchall()
 
         subjects = []
-        total_coef = 0
-        total_notes = 0.0
 
         for row in subject_rows:
             (
@@ -656,6 +605,7 @@ def get_lycee_bulletin_data(student_id: int, term_id: int) -> dict:
                 coefficient,
                 classe_note,
                 compo_note,
+                subject_type,
                 _teacher_id,
                 teacher_name,
             ) = row
@@ -680,11 +630,10 @@ def get_lycee_bulletin_data(student_id: int, term_id: int) -> dict:
                 "rang": rang,
                 "appreciation": appreciation,
                 "teacher_name": teacher_name or "-",
+                "is_optional": subject_type == "FACULTATIVE",
             })
-
-            total_coef += coefficient
-            total_notes += note_def
-
+        total_coef, principal_total_notes, total_notes, optional_bonus = _compute_main_totals(subjects)
+        optional_average, _ = _compute_optional_bonus(subjects)
         general_average = round(total_notes / total_coef, 2) if total_coef > 0 else 0.0
         general_rank, _ = get_general_rank(class_id, student_id, term_id, school_year_id)
 
@@ -719,6 +668,9 @@ def get_lycee_bulletin_data(student_id: int, term_id: int) -> dict:
             "subjects": subjects,
             "total_coef": total_coef,
             "total_notes": round(total_notes, 2),
+            "principal_total_notes": round(principal_total_notes, 2),
+            "optional_average": optional_average,
+            "optional_bonus": optional_bonus,
             "general_average": general_average,
             "general_rank": general_rank,
             "avg_trim_1": round(term_averages[0], 2),

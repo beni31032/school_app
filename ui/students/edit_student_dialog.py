@@ -1,6 +1,10 @@
+import os
+import shutil
+from uuid import uuid4
+
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QFormLayout, QLineEdit, QComboBox,
-    QPushButton, QMessageBox, QDateEdit, QLabel, QHBoxLayout
+    QPushButton, QMessageBox, QDateEdit, QLabel, QHBoxLayout, QFileDialog
 )
 from PyQt6.QtCore import QDate
 
@@ -17,6 +21,8 @@ class EditStudentDialog(QDialog):
         self.current_school_year_id = None
         self.current_enrollment_id = None
         self.current_establishment_id = None
+        self.current_photo_path = None
+        self.photo_source_path = None
 
         self.setWindowTitle("Modifier élève")
         self.setFixedWidth(420)
@@ -38,6 +44,9 @@ class EditStudentDialog(QDialog):
 
         self.establishment_label = QLabel("-")
         self.class_input = QComboBox()
+        self.photo_label = QLabel("Aucune photo sélectionnée")
+        self.photo_button = QPushButton("Choisir une photo")
+        self.photo_button.clicked.connect(self.choose_photo)
 
         self.save_btn = QPushButton("Enregistrer")
         self.cancel_btn = QPushButton("Annuler")
@@ -52,6 +61,7 @@ class EditStudentDialog(QDialog):
         self.form_layout.addRow("Sexe :", self.gender_input)
         self.form_layout.addRow("Établissement :", self.establishment_label)
         self.form_layout.addRow("Classe :", self.class_input)
+        self.form_layout.addRow(self.photo_button, self.photo_label)
 
         btn_layout = QHBoxLayout()
         btn_layout.addWidget(self.save_btn)
@@ -96,10 +106,26 @@ class EditStudentDialog(QDialog):
             """
         )
 
+    def show_message(self, icon, title, text):
+        box = QMessageBox(self)
+        box.setIcon(icon)
+        box.setWindowTitle(title)
+        box.setText(text)
+        box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        box.setStyleSheet(
+            """
+            QLabel {
+                min-width: 360px;
+                color: #111827;
+            }
+            """
+        )
+        box.exec()
+
     def load_current_school_year(self):
         conn = get_connection()
         if not conn:
-            QMessageBox.critical(self, "Erreur", "Connexion base impossible")
+            self.show_message(QMessageBox.Icon.Critical, "Erreur", "Connexion base impossible")
             return
 
         try:
@@ -117,13 +143,13 @@ class EditStudentDialog(QDialog):
             if row:
                 self.current_school_year_id = row[0]
             else:
-                QMessageBox.warning(
-                    self,
+                self.show_message(
+                    QMessageBox.Icon.Warning,
                     "Validation",
                     "Aucune année scolaire n'existe dans la base."
                 )
         except Exception as e:
-            QMessageBox.critical(self, "Erreur", f"Chargement année scolaire impossible : {e}")
+            self.show_message(QMessageBox.Icon.Critical, "Erreur", f"Chargement année scolaire impossible : {e}")
         finally:
             conn.close()
 
@@ -132,7 +158,7 @@ class EditStudentDialog(QDialog):
 
         conn = get_connection()
         if not conn:
-            QMessageBox.critical(self, "Erreur", "Connexion base impossible")
+            self.show_message(QMessageBox.Icon.Critical, "Erreur", "Connexion base impossible")
             return
 
         try:
@@ -158,7 +184,7 @@ class EditStudentDialog(QDialog):
                 self.class_input.setCurrentIndex(selected_index)
 
         except Exception as e:
-            QMessageBox.critical(self, "Erreur", f"Chargement classes impossible : {e}")
+            self.show_message(QMessageBox.Icon.Critical, "Erreur", f"Chargement classes impossible : {e}")
         finally:
             conn.close()
 
@@ -168,7 +194,7 @@ class EditStudentDialog(QDialog):
 
         conn = get_connection()
         if not conn:
-            QMessageBox.critical(self, "Erreur", "Connexion base impossible")
+            self.show_message(QMessageBox.Icon.Critical, "Erreur", "Connexion base impossible")
             return
 
         try:
@@ -182,6 +208,7 @@ class EditStudentDialog(QDialog):
                     s.last_name,
                     s.birth_date,
                     s.gender,
+                    s.photo_path,
                     s.establishment_id,
                     est.name,
                     e.id AS enrollment_id,
@@ -199,7 +226,7 @@ class EditStudentDialog(QDialog):
             row = cursor.fetchone()
 
             if not row:
-                QMessageBox.warning(self, "Erreur", "Élève introuvable.")
+                self.show_message(QMessageBox.Icon.Warning, "Erreur", "Élève introuvable.")
                 self.reject()
                 return
 
@@ -209,6 +236,7 @@ class EditStudentDialog(QDialog):
                 last_name,
                 birth_date,
                 gender,
+                photo_path,
                 establishment_id,
                 establishment_name,
                 enrollment_id,
@@ -217,7 +245,7 @@ class EditStudentDialog(QDialog):
 
             if self.current_user["role"] != "ADMIN_GLOBAL":
                 if establishment_id != self.current_user["establishment_id"]:
-                    QMessageBox.critical(self, "Sécurité", "Action non autorisée.")
+                    self.show_message(QMessageBox.Icon.Critical, "Sécurité", "Action non autorisée.")
                     self.reject()
                     return
 
@@ -235,14 +263,44 @@ class EditStudentDialog(QDialog):
                 self.gender_input.setCurrentText(gender)
 
             self.establishment_label.setText(establishment_name or "-")
+            self.current_photo_path = photo_path
+            if photo_path:
+                self.photo_label.setText(os.path.basename(photo_path))
+            else:
+                self.photo_label.setText("Aucune photo sélectionnée")
 
             self.load_classes(establishment_id, class_id)
 
         except Exception as e:
-            QMessageBox.critical(self, "Erreur", f"Chargement élève impossible : {e}")
+            self.show_message(QMessageBox.Icon.Critical, "Erreur", f"Chargement élève impossible : {e}")
             self.reject()
         finally:
             conn.close()
+
+    def choose_photo(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Choisir une photo",
+            "",
+            "Images (*.png *.jpg *.jpeg *.bmp)"
+        )
+
+        if file_path:
+            self.photo_source_path = file_path
+            self.photo_label.setText(os.path.basename(file_path))
+
+    def save_photo(self):
+        if not self.photo_source_path:
+            return self.current_photo_path
+
+        os.makedirs("assets/photos", exist_ok=True)
+
+        ext = os.path.splitext(self.photo_source_path)[1]
+        new_name = f"{uuid4().hex}{ext}"
+        destination = os.path.join("assets/photos", new_name)
+
+        shutil.copy(self.photo_source_path, destination)
+        return destination.replace("\\", "/")
 
     def update_student(self):
         matricule = self.matricule_input.text().strip()
@@ -251,18 +309,19 @@ class EditStudentDialog(QDialog):
         birth_date = self.birth_date_input.date().toString("yyyy-MM-dd")
         gender = self.gender_input.currentText()
         class_id = self.class_input.currentData()
+        photo_path = self.save_photo()
 
         if not matricule or not first_name or not last_name:
-            QMessageBox.warning(self, "Validation", "Matricule, prénom et nom sont obligatoires.")
+            self.show_message(QMessageBox.Icon.Warning, "Validation", "Matricule, prénom et nom sont obligatoires.")
             return
 
         if class_id is None:
-            QMessageBox.warning(self, "Validation", "Veuillez sélectionner une classe.")
+            self.show_message(QMessageBox.Icon.Warning, "Validation", "Veuillez sélectionner une classe.")
             return
 
         conn = get_connection()
         if not conn:
-            QMessageBox.critical(self, "Erreur", "Connexion base impossible")
+            self.show_message(QMessageBox.Icon.Critical, "Erreur", "Connexion base impossible")
             return
 
         try:
@@ -280,15 +339,15 @@ class EditStudentDialog(QDialog):
 
             if not class_row:
                 conn.rollback()
-                QMessageBox.warning(self, "Validation", "Classe invalide.")
+                self.show_message(QMessageBox.Icon.Warning, "Validation", "Classe invalide.")
                 return
 
             class_establishment_id = class_row[0]
 
             if class_establishment_id != self.current_establishment_id:
                 conn.rollback()
-                QMessageBox.warning(
-                    self,
+                self.show_message(
+                    QMessageBox.Icon.Warning,
                     "Validation",
                     "La classe choisie n'appartient pas à l'établissement de l'élève."
                 )
@@ -301,7 +360,8 @@ class EditStudentDialog(QDialog):
                     first_name = %s,
                     last_name = %s,
                     birth_date = %s,
-                    gender = %s
+                    gender = %s,
+                    photo_path = %s
                 WHERE id = %s
                 """,
                 (
@@ -310,6 +370,7 @@ class EditStudentDialog(QDialog):
                     last_name,
                     birth_date,
                     gender,
+                    photo_path,
                     self.student_id
                 )
             )
@@ -333,11 +394,11 @@ class EditStudentDialog(QDialog):
                 )
 
             conn.commit()
-            QMessageBox.information(self, "Succès", "Élève modifié avec succès.")
+            self.show_message(QMessageBox.Icon.Information, "Succès", "Élève modifié avec succès.")
             self.accept()
 
         except Exception as e:
             conn.rollback()
-            QMessageBox.critical(self, "Erreur", f"Modification impossible : {e}")
+            self.show_message(QMessageBox.Icon.Critical, "Erreur", f"Modification impossible : {e}")
         finally:
             conn.close()

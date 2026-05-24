@@ -3,6 +3,7 @@ import subprocess
 import sys
 
 from PyQt6.QtPrintSupport import QPrinterInfo
+from pypdf import PdfReader
 
 
 def open_file(filepath: str) -> None:
@@ -118,11 +119,46 @@ def get_default_printer_name() -> str | None:
     return None
 
 
+def _detect_pdf_media(filepath: str) -> str | None:
+    try:
+        reader = PdfReader(filepath)
+        if not reader.pages:
+            return None
+
+        page = reader.pages[0]
+        media_box = page.mediabox
+        width = float(media_box.width)
+        height = float(media_box.height)
+        shortest, longest = sorted([width, height])
+
+        if abs(shortest - 419.5) < 12 and abs(longest - 595.3) < 12:
+            return "A5"
+        if abs(shortest - 595.3) < 12 and abs(longest - 841.9) < 12:
+            return "A4"
+    except Exception:
+        return None
+
+    return None
+
+
 def send_file_to_printer(filepath: str, printer_name: str | None = None) -> str:
     if sys.platform.startswith("linux"):
-        command = ["lp"]
+        command = [
+            "lp",
+            "-o",
+            "fit-to-page",
+            "-o",
+            "position=center",
+            "-o",
+            "orientation-requested=3",
+        ]
         if printer_name:
             command.extend(["-d", printer_name])
+
+        detected_media = _detect_pdf_media(filepath)
+        if detected_media:
+            command.extend(["-o", f"media={detected_media}"])
+
         command.append(filepath)
         result = subprocess.run(
             command,

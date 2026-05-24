@@ -117,8 +117,30 @@ def _draw_identity_block(c: canvas.Canvas, width: float, y: float, data: dict, t
 
     c.setStrokeColor(PRIMARY_SLATE)
     c.rect(photo_x, photo_y, photo_w, photo_h)
+    photo_path = data.get("photo_path")
+    drawn = False
+    if photo_path:
+        normalized = photo_path.replace("\\", "/")
+        absolute_path = normalized if os.path.isabs(normalized) else os.path.abspath(normalized)
+        if os.path.exists(absolute_path):
+            try:
+                c.drawImage(
+                    absolute_path,
+                    photo_x + 1.5,
+                    photo_y + 1.5,
+                    width=photo_w - 3,
+                    height=photo_h - 3,
+                    preserveAspectRatio=True,
+                    mask="auto",
+                    anchor="c",
+                )
+                drawn = True
+            except Exception:
+                drawn = False
+
     c.setFont("Helvetica", 6.3)
-    c.drawCentredString(photo_x + photo_w / 2, y - 60, "Photo")
+    if not drawn:
+        c.drawCentredString(photo_x + photo_w / 2, y - 60, "Photo")
 
     return y - block_h - 8
 

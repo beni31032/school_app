@@ -103,12 +103,28 @@ class AddStudentDialog(QDialog):
             """
         )
 
+    def show_message(self, icon, title, text):
+        box = QMessageBox(self)
+        box.setIcon(icon)
+        box.setWindowTitle(title)
+        box.setText(text)
+        box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        box.setStyleSheet(
+            """
+            QLabel {
+                min-width: 360px;
+                color: #111827;
+            }
+            """
+        )
+        box.exec()
+
     def load_establishments(self):
         self.establishment_input.clear()
 
         conn = get_connection()
         if not conn:
-            QMessageBox.critical(self, "Erreur", "Connexion base impossible")
+            self.show_message(QMessageBox.Icon.Critical, "Erreur", "Connexion base impossible")
             return
 
         try:
@@ -141,7 +157,7 @@ class AddStudentDialog(QDialog):
                 self.establishment_input.setEnabled(False)
 
         except Exception as e:
-            QMessageBox.critical(self, "Erreur", f"Chargement établissements impossible : {e}")
+            self.show_message(QMessageBox.Icon.Critical, "Erreur", f"Chargement établissements impossible : {e}")
         finally:
             conn.close()
 
@@ -154,7 +170,7 @@ class AddStudentDialog(QDialog):
 
         conn = get_connection()
         if not conn:
-            QMessageBox.critical(self, "Erreur", "Connexion base impossible")
+            self.show_message(QMessageBox.Icon.Critical, "Erreur", "Connexion base impossible")
             return
 
         try:
@@ -174,7 +190,7 @@ class AddStudentDialog(QDialog):
                 self.class_input.addItem(name, class_id)
 
         except Exception as e:
-            QMessageBox.critical(self, "Erreur", f"Chargement classes impossible : {e}")
+            self.show_message(QMessageBox.Icon.Critical, "Erreur", f"Chargement classes impossible : {e}")
         finally:
             conn.close()
 
@@ -213,27 +229,31 @@ class AddStudentDialog(QDialog):
         class_id = self.class_input.currentData()
 
         if not matricule or not first_name or not last_name:
-            QMessageBox.warning(self, "Validation", "Matricule, prénom et nom sont obligatoires.")
+            self.show_message(
+                QMessageBox.Icon.Warning,
+                "Validation",
+                "Matricule, prénom et nom sont obligatoires.",
+            )
             return
 
         if establishment_id is None:
-            QMessageBox.warning(self, "Validation", "Établissement invalide.")
+            self.show_message(QMessageBox.Icon.Warning, "Validation", "Établissement invalide.")
             return
 
         if class_id is None:
-            QMessageBox.warning(self, "Validation", "Veuillez sélectionner une classe.")
+            self.show_message(QMessageBox.Icon.Warning, "Validation", "Veuillez sélectionner une classe.")
             return
 
         if self.current_user["role"] != "ADMIN_GLOBAL":
             if establishment_id != self.current_user["establishment_id"]:
-                QMessageBox.critical(self, "Sécurité", "Action non autorisée.")
+                self.show_message(QMessageBox.Icon.Critical, "Sécurité", "Action non autorisée.")
                 return
 
         photo_path = self.save_photo()
 
         conn = get_connection()
         if not conn:
-            QMessageBox.critical(self, "Erreur", "Connexion base impossible")
+            self.show_message(QMessageBox.Icon.Critical, "Erreur", "Connexion base impossible")
             return
 
         try:
@@ -251,15 +271,15 @@ class AddStudentDialog(QDialog):
 
             if not class_row:
                 conn.rollback()
-                QMessageBox.warning(self, "Validation", "Classe invalide.")
+                self.show_message(QMessageBox.Icon.Warning, "Validation", "Classe invalide.")
                 return
 
             class_establishment_id = class_row[0]
 
             if class_establishment_id != establishment_id:
                 conn.rollback()
-                QMessageBox.warning(
-                    self,
+                self.show_message(
+                    QMessageBox.Icon.Warning,
                     "Validation",
                     "La classe choisie n'appartient pas à l'établissement sélectionné."
                 )
@@ -293,8 +313,8 @@ class AddStudentDialog(QDialog):
 
             if year_row is None:
                 conn.rollback()
-                QMessageBox.warning(
-                    self,
+                self.show_message(
+                    QMessageBox.Icon.Warning,
                     "Validation",
                     "Aucune année scolaire définie. Crée d'abord une année scolaire."
                 )
@@ -311,11 +331,11 @@ class AddStudentDialog(QDialog):
             )
 
             conn.commit()
-            QMessageBox.information(self, "Succès", "Élève enregistré avec succès.")
+            self.show_message(QMessageBox.Icon.Information, "Succès", "Élève enregistré avec succès.")
             self.accept()
 
         except Exception as e:
             conn.rollback()
-            QMessageBox.critical(self, "Erreur", f"Enregistrement impossible : {e}")
+            self.show_message(QMessageBox.Icon.Critical, "Erreur", f"Enregistrement impossible : {e}")
         finally:
             conn.close()
