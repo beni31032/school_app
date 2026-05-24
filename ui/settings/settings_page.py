@@ -1,4 +1,4 @@
-from PyQt6.QtCore import QDate, Qt
+from PyQt6.QtCore import QDate, Qt, pyqtSignal
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import (
     QWidget,
@@ -612,6 +612,8 @@ class SchoolInfoDialog(BaseSettingsDialog):
 
 
 class SettingsPage(QWidget):
+    school_years_updated = pyqtSignal()
+
     def __init__(self, current_user):
         super().__init__()
         self.current_user = current_user
@@ -1560,6 +1562,7 @@ class SettingsPage(QWidget):
         dialog = SchoolYearDialog(self.current_user, parent=self)
         if dialog.exec():
             self.refresh_all()
+            self.school_years_updated.emit()
 
     def open_edit_school_year(self):
         school_year_id = self._selected_id(self.school_years_table)
@@ -1569,6 +1572,7 @@ class SettingsPage(QWidget):
         dialog = SchoolYearDialog(self.current_user, school_year_id=school_year_id, parent=self)
         if dialog.exec():
             self.refresh_all()
+            self.school_years_updated.emit()
 
     def open_add_user(self):
         dialog = UserDialog(self.current_user, parent=self)
