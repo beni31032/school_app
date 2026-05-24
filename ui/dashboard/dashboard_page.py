@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 
 from database.connection import get_connection
+from utils.discount_service import ensure_discount_schema
 
 
 class StatCard(QFrame):
@@ -36,6 +37,7 @@ class DashboardPage(QWidget):
         super().__init__()
 
         self.current_user = current_user
+        ensure_discount_schema()
 
         self.main_layout = QVBoxLayout()
         self.main_layout.setContentsMargins(20, 20, 20, 20)
@@ -265,6 +267,7 @@ class DashboardPage(QWidget):
                                     SELECT SUM(sd.amount)
                                     FROM student_discounts sd
                                     WHERE sd.student_id = e.student_id
+                                      AND sd.school_year_id = e.school_year_id
                                       AND sd.fee_id = cf.fee_id
                                 ), 0)
                                 - COALESCE((
@@ -298,6 +301,7 @@ class DashboardPage(QWidget):
                                     SELECT SUM(sd.amount)
                                     FROM student_discounts sd
                                     WHERE sd.student_id = e.student_id
+                                      AND sd.school_year_id = e.school_year_id
                                       AND sd.fee_id = cf.fee_id
                                 ), 0)
                                 - COALESCE((

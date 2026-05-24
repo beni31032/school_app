@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
 )
 
 from database.connection import get_connection
+from utils.discount_service import ensure_discount_schema
 
 
 class StudentFinanceDetailsDialog(QDialog):
@@ -19,6 +20,7 @@ class StudentFinanceDetailsDialog(QDialog):
         self.current_user = current_user
         self.current_school_year_id = current_school_year_id
         self.is_global_admin = self.current_user["role"] == "ADMIN_GLOBAL"
+        ensure_discount_schema()
 
         self.setWindowTitle("Fiche complète situation élève")
         self.resize(760, 520)
@@ -142,11 +144,14 @@ class StudentFinanceDetailsDialog(QDialog):
                         SELECT SUM(sd.amount)
                         FROM student_discounts sd
                         WHERE sd.student_id = %s
+                          AND sd.school_year_id = %s
                     ), 0) AS discount_total,
                     COALESCE((
                         SELECT SUM(p.amount)
                         FROM payments p
+                        JOIN class_fees cf_paid ON cf_paid.id = p.class_fee_id
                         WHERE p.student_id = %s
+                          AND cf_paid.school_year_id = %s
                     ), 0) AS paid_total
                 FROM class_fees cf
                 JOIN enrollments e ON e.class_id = cf.class_id
@@ -156,7 +161,9 @@ class StudentFinanceDetailsDialog(QDialog):
                 """,
                 (
                     self.student_id,
+                    self.current_school_year_id,
                     self.student_id,
+                    self.current_school_year_id,
                     self.student_id,
                     self.current_school_year_id,
                     self.current_school_year_id,

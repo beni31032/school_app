@@ -7,6 +7,7 @@ from PyQt6.QtCore import Qt
 from database.connection import get_connection
 from ui.finance.add_discount_dialog import AddDiscountDialog
 from ui.finance.discount_details_dialog import DiscountDetailsDialog
+from utils.discount_service import ensure_discount_schema
 from utils.table_style import setup_table
 
 
@@ -16,6 +17,7 @@ class DiscountsPage(QWidget):
 
         self.current_user = current_user
         self.is_global_admin = self.current_user["role"] == "ADMIN_GLOBAL"
+        ensure_discount_schema()
 
         layout = QVBoxLayout()
 
@@ -23,10 +25,13 @@ class DiscountsPage(QWidget):
         self.search_input.setPlaceholderText("Rechercher par élève ou type de frais")
         filters_layout = QHBoxLayout()
         self.establishment_filter = QComboBox()
+        self.school_year_filter = QComboBox()
         self.fee_filter = QComboBox()
 
         filters_layout.addWidget(QLabel("Établissement"))
         filters_layout.addWidget(self.establishment_filter)
+        filters_layout.addWidget(QLabel("Année"))
+        filters_layout.addWidget(self.school_year_filter)
         filters_layout.addWidget(QLabel("Frais"))
         filters_layout.addWidget(self.fee_filter)
 
@@ -40,13 +45,14 @@ class DiscountsPage(QWidget):
         btn_layout.addWidget(self.refresh_btn)
 
         self.table = QTableWidget()
-        self.table.setColumnCount(6)
+        self.table.setColumnCount(7)
         self.table.setHorizontalHeaderLabels([
             "ID",
             "Élève",
             "Frais",
             "Montant",
             "Motif",
+            "Année scolaire",
             "Date"
         ])
         self.table.setColumnHidden(0, True)
@@ -61,6 +67,7 @@ class DiscountsPage(QWidget):
         self.d_fee = QLabel("-")
         self.d_amount = QLabel("-")
         self.d_reason = QLabel("-")
+        self.d_school_year = QLabel("-")
         self.d_date = QLabel("-")
         self.d_reason.setWordWrap(True)
 
@@ -68,6 +75,7 @@ class DiscountsPage(QWidget):
         details_layout.addRow("Frais :", self.d_fee)
         details_layout.addRow("Montant :", self.d_amount)
         details_layout.addRow("Motif :", self.d_reason)
+        details_layout.addRow("Année scolaire :", self.d_school_year)
         details_layout.addRow("Date :", self.d_date)
 
         layout.addWidget(QLabel("Réductions"))
@@ -116,10 +124,12 @@ class DiscountsPage(QWidget):
         self.refresh_btn.clicked.connect(self.load_discounts)
         self.search_input.textChanged.connect(self.load_discounts)
         self.establishment_filter.currentIndexChanged.connect(self.load_discounts)
+        self.school_year_filter.currentIndexChanged.connect(self.load_discounts)
         self.fee_filter.currentIndexChanged.connect(self.load_discounts)
         self.table.itemSelectionChanged.connect(self.load_selected_details)
 
         self.load_establishments()
+        self.load_school_years()
         self.load_fees()
         self.load_discounts()
 
@@ -161,6 +171,23 @@ class DiscountsPage(QWidget):
         finally:
             conn.close()
 
+    def load_school_years(self):
+        self.school_year_filter.clear()
+        conn = get_connection()
+        if not conn:
+            return
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, name FROM school_years ORDER BY id DESC")
+            rows = cursor.fetchall()
+            if not rows:
+                self.school_year_filter.addItem("Aucune", None)
+                return
+            for school_year_id, name in rows:
+                self.school_year_filter.addItem(name, school_year_id)
+        finally:
+            conn.close()
+
     def load_discounts(self):
         conn = get_connection()
         if not conn:
@@ -168,14 +195,16 @@ class DiscountsPage(QWidget):
 
         search = f"%{self.search_input.text()}%"
         establishment_id = self.establishment_filter.currentData()
+        school_year_id = self.school_year_filter.currentData()
         fee_id = self.fee_filter.currentData()
 
         try:
             cursor = conn.cursor()
             filters = [
+                "d.school_year_id = %s",
                 "(s.first_name ILIKE %s OR s.last_name ILIKE %s OR COALESCE(s.matricule,'') ILIKE %s OR f.name ILIKE %s OR COALESCE(d.reason,'') ILIKE %s)"
             ]
-            params = [search, search, search, search, search]
+            params = [school_year_id, search, search, search, search, search]
 
             if self.is_global_admin:
                 if establishment_id is not None:
@@ -198,10 +227,12 @@ class DiscountsPage(QWidget):
                     f.name,
                     d.amount,
                     COALESCE(d.reason, ''),
+                    COALESCE(sy.name, ''),
                     d.created_at
                 FROM student_discounts d
                 JOIN students s ON s.id = d.student_id
                 JOIN fees f ON f.id = d.fee_id
+                LEFT JOIN school_years sy ON sy.id = d.school_year_id
                 WHERE {where_sql}
                 ORDER BY d.created_at DESC
                 """,
@@ -239,6 +270,7 @@ class DiscountsPage(QWidget):
         self.d_fee.setText("-")
         self.d_amount.setText("-")
         self.d_reason.setText("-")
+        self.d_school_year.setText("-")
         self.d_date.setText("-")
 
     def load_selected_details(self):
@@ -265,10 +297,12 @@ class DiscountsPage(QWidget):
                     f.name,
                     d.amount,
                     COALESCE(d.reason, ''),
+                    COALESCE(sy.name, ''),
                     d.created_at
                 FROM student_discounts d
                 JOIN students s ON s.id = d.student_id
                 JOIN fees f ON f.id = d.fee_id
+                LEFT JOIN school_years sy ON sy.id = d.school_year_id
                 WHERE d.id = %s
             """
             params = [int(discount_id_item.text())]
@@ -282,11 +316,12 @@ class DiscountsPage(QWidget):
                 self.clear_details()
                 return
 
-            student_name, fee_name, amount, reason, created_at = row
+            student_name, fee_name, amount, reason, school_year_name, created_at = row
             self.d_student.setText(student_name or "-")
             self.d_fee.setText(fee_name or "-")
             self.d_amount.setText(f"{float(amount or 0):,.0f} FCFA")
             self.d_reason.setText(reason or "-")
+            self.d_school_year.setText(school_year_name or "-")
             self.d_date.setText("" if created_at is None else str(created_at))
         finally:
             conn.close()

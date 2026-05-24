@@ -25,6 +25,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 
 from database.connection import get_connection
 from utils.college_bulletin_service import get_college_bulletin_data
+from utils.discount_service import ensure_discount_schema
 from utils.expense_service import ensure_expenses_table
 from utils.lycee_bulletin_service import get_lycee_bulletin_data
 from utils.primary_bulletin_service import get_primary_bulletin_data
@@ -108,6 +109,7 @@ class ListsPage(QWidget):
         super().__init__()
         self.current_user = current_user
         self.is_global_admin = self.current_user["role"] == "ADMIN_GLOBAL"
+        ensure_discount_schema()
         ensure_teacher_schema()
         ensure_salary_table()
         ensure_expenses_table()
@@ -542,6 +544,7 @@ class ListsPage(QWidget):
                         fee_id,
                         SUM(amount) AS discount_amount
                     FROM student_discounts
+                    WHERE school_year_id = %s
                     GROUP BY student_id, fee_id
                 ) sd
                     ON sd.student_id = fs.student_id
@@ -583,6 +586,7 @@ class ListsPage(QWidget):
                 fs.gender,
                 fs.class_name
         """
+        params.append(school_year_id)
         params.append(school_year_id)
         return sql, params
 
@@ -1253,11 +1257,10 @@ class ListsPage(QWidget):
 
     def _load_discounts_rows(self, cursor, est_id, school_year_id, class_id, search: str) -> tuple[list[str], list[tuple]]:
         where = [
-            "e.school_year_id = %s",
-            "cf.school_year_id = %s",
+            "d.school_year_id = %s",
             "(COALESCE(s.matricule, '') ILIKE %s OR s.last_name ILIKE %s OR s.first_name ILIKE %s OR f.name ILIKE %s OR c.name ILIKE %s OR COALESCE(d.reason, '') ILIKE %s)",
         ]
-        params: list[object] = [school_year_id, school_year_id, search, search, search, search, search, search]
+        params: list[object] = [school_year_id, search, search, search, search, search, search]
 
         if class_id is not None:
             where.append("c.id = %s")
@@ -1284,13 +1287,11 @@ class ListsPage(QWidget):
                 d.created_at
             FROM student_discounts d
             JOIN students s ON s.id = d.student_id
-            JOIN enrollments e ON e.student_id = s.id
+            JOIN enrollments e
+              ON e.student_id = s.id
+             AND e.school_year_id = d.school_year_id
             JOIN classes c ON c.id = e.class_id
             JOIN fees f ON f.id = d.fee_id
-            JOIN class_fees cf
-                ON cf.class_id = e.class_id
-               AND cf.fee_id = d.fee_id
-               AND cf.school_year_id = e.school_year_id
             WHERE {' AND '.join(where)}
             ORDER BY d.created_at DESC, s.last_name, s.first_name
             """,

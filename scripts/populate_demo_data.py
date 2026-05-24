@@ -559,8 +559,8 @@ def main() -> int:
         for class_name, first_name, last_name, amount, reason in discount_targets:
             cursor.execute(
                 """
-                INSERT INTO student_discounts (student_id, fee_id, amount, reason, created_by, created_at)
-                VALUES (%s, %s, %s, %s, %s, NOW())
+                INSERT INTO student_discounts (student_id, fee_id, amount, reason, created_by, created_at, school_year_id)
+                VALUES (%s, %s, %s, %s, %s, NOW(), %s)
                 """,
                 (
                     student_ids[(class_name, first_name, last_name)],
@@ -568,6 +568,7 @@ def main() -> int:
                     amount,
                     reason,
                     cashier_user_id,
+                    school_year_id,
                 ),
             )
 

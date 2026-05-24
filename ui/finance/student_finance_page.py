@@ -7,6 +7,7 @@ from PyQt6.QtCore import Qt
 
 from database.connection import get_connection
 from ui.finance.student_finance_details_dialog import StudentFinanceDetailsDialog
+from utils.discount_service import ensure_discount_schema
 from utils.table_style import setup_table
 
 
@@ -18,6 +19,7 @@ class StudentFinancePage(QWidget):
         self.current_school_year_id = None
         self.selected_student_id = None
         self.is_global_admin = self.current_user["role"] == "ADMIN_GLOBAL"
+        ensure_discount_schema()
 
         layout = QVBoxLayout()
         form = QFormLayout()
@@ -409,6 +411,7 @@ class StudentFinancePage(QWidget):
                         SELECT SUM(sd.amount)
                         FROM student_discounts sd
                         WHERE sd.student_id = %s
+                          AND sd.school_year_id = %s
                           AND sd.fee_id = f.id
                     ), 0) AS discount,
                     COALESCE((
@@ -427,6 +430,7 @@ class StudentFinancePage(QWidget):
                 """,
                 (
                     self.selected_student_id,
+                    self.current_school_year_id,
                     self.selected_student_id,
                     self.selected_student_id,
                     self.current_school_year_id,
@@ -506,9 +510,10 @@ class StudentFinancePage(QWidget):
                 LEFT JOIN fees fcf ON fcf.id = cf.fee_id
                 LEFT JOIN fees ffallback ON ffallback.id = p.fee_id
                 WHERE p.student_id = %s
+                  AND cf.school_year_id = %s
                 ORDER BY p.payment_date DESC, p.id DESC
                 """,
-                (self.selected_student_id,)
+                (self.selected_student_id, self.current_school_year_id)
             )
 
             rows = cursor.fetchall()

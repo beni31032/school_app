@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 
 from database.connection import get_connection
+from utils.discount_service import ensure_discount_schema
 from utils.table_style import setup_table
 
 
@@ -16,6 +17,7 @@ class AddDiscountDialog(QDialog):
         self.current_user = current_user
         self.selected_student_id = None
         self.current_school_year_id = None
+        ensure_discount_schema()
 
         self.setWindowTitle("Ajouter une réduction")
         self.setMinimumWidth(600)
@@ -258,7 +260,6 @@ class AddDiscountDialog(QDialog):
             )
 
     def save_discount(self):
-
         if not self.selected_student_id:
             QMessageBox.warning(self, "Validation", "Sélectionnez un élève.")
             return
@@ -281,6 +282,10 @@ class AddDiscountDialog(QDialog):
             )
             return
 
+        if self.current_school_year_id is None:
+            QMessageBox.warning(self, "Validation", "Aucune année scolaire active.")
+            return
+
         conn = get_connection()
 
         if not conn:
@@ -295,9 +300,10 @@ class AddDiscountDialog(QDialog):
                 SELECT COUNT(*)
                 FROM student_discounts
                 WHERE student_id = %s
-                AND fee_id = %s
+                  AND fee_id = %s
+                  AND school_year_id = %s
                 """,
-                (self.selected_student_id, fee_id)
+                (self.selected_student_id, fee_id, self.current_school_year_id)
             )
 
             if cursor.fetchone()[0] > 0:
@@ -346,15 +352,16 @@ class AddDiscountDialog(QDialog):
             cursor.execute(
                 """
                 INSERT INTO student_discounts
-                (student_id, fee_id, amount, reason, created_by)
-                VALUES (%s,%s,%s,%s,%s)
+                (student_id, fee_id, amount, reason, created_by, school_year_id)
+                VALUES (%s,%s,%s,%s,%s,%s)
                 """,
                 (
                     self.selected_student_id,
                     fee_id,
                     amount,
                     reason,
-                    self.current_user["id"]
+                    self.current_user["id"],
+                    self.current_school_year_id,
                 )
             )
 

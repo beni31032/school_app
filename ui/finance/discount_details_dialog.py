@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
 )
 
 from database.connection import get_connection
+from utils.discount_service import ensure_discount_schema
 
 
 class DiscountDetailsDialog(QDialog):
@@ -18,6 +19,7 @@ class DiscountDetailsDialog(QDialog):
         self.discount_id = int(discount_id)
         self.current_user = current_user
         self.is_global_admin = self.current_user.get("role") == "ADMIN_GLOBAL"
+        ensure_discount_schema()
 
         self.setWindowTitle("Fiche complète réduction")
         self.resize(760, 460)
@@ -40,6 +42,7 @@ class DiscountDetailsDialog(QDialog):
         self.v_fee = QLabel("-")
         self.v_amount = QLabel("-")
         self.v_reason = QLabel("-")
+        self.v_school_year = QLabel("-")
         self.v_date = QLabel("-")
 
         self.v_reason.setWordWrap(True)
@@ -51,6 +54,7 @@ class DiscountDetailsDialog(QDialog):
         form.addRow("Type de frais :", self.v_fee)
         form.addRow("Montant :", self.v_amount)
         form.addRow("Motif :", self.v_reason)
+        form.addRow("Année scolaire :", self.v_school_year)
         form.addRow("Date :", self.v_date)
 
         actions = QHBoxLayout()
@@ -115,11 +119,15 @@ class DiscountDetailsDialog(QDialog):
                     f.name,
                     d.amount,
                     COALESCE(d.reason, ''),
+                    COALESCE(sy.name, ''),
                     d.created_at
                 FROM student_discounts d
                 JOIN students s ON s.id = d.student_id
                 JOIN fees f ON f.id = d.fee_id
-                LEFT JOIN enrollments e ON e.student_id = s.id
+                LEFT JOIN school_years sy ON sy.id = d.school_year_id
+                LEFT JOIN enrollments e
+                    ON e.student_id = s.id
+                   AND e.school_year_id = d.school_year_id
                 LEFT JOIN classes c ON c.id = e.class_id
                 WHERE d.id = %s
             """
@@ -135,7 +143,7 @@ class DiscountDetailsDialog(QDialog):
                 QMessageBox.warning(self, "Erreur", "Réduction introuvable.")
                 return
 
-            discount_id, student_name, matricule, class_name, fee_name, amount, reason, created_at = row
+            discount_id, student_name, matricule, class_name, fee_name, amount, reason, school_year_name, created_at = row
             self.v_id.setText(str(discount_id))
             self.v_student.setText(student_name or "-")
             self.v_matricule.setText(matricule or "-")
@@ -143,6 +151,7 @@ class DiscountDetailsDialog(QDialog):
             self.v_fee.setText(fee_name or "-")
             self.v_amount.setText(f"{float(amount or 0):,.0f} FCFA")
             self.v_reason.setText(reason or "-")
+            self.v_school_year.setText(school_year_name or "-")
             self.v_date.setText("" if created_at is None else str(created_at))
 
         except Exception as e:

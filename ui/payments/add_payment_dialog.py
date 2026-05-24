@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 
 from database.connection import get_connection
+from utils.discount_service import ensure_discount_schema
 from utils.qt_printing import print_pdf_file
 from utils.receipt_generator import generate_receipt
 
@@ -19,6 +20,7 @@ class AddPaymentDialog(QDialog):
         self.current_user = current_user
         self.current_school_year_id = None
         self.selected_student_id = None
+        ensure_discount_schema()
 
         self.setWindowTitle("Ajouter un paiement")
         self.setFixedWidth(700)
@@ -386,8 +388,9 @@ class AddPaymentDialog(QDialog):
                 FROM student_discounts
                 WHERE student_id = %s
                   AND fee_id = %s
+                  AND school_year_id = %s
                 """,
-                (student_id, fee_id)
+                (student_id, fee_id, self.current_school_year_id)
             )
             row = cursor.fetchone()
             return float(row[0] or 0)
