@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
 )
 
 from database.connection import get_connection
+from utils.message_boxes import show_error_dialog
 from utils.subject_service import ensure_subject_schema
 from utils.teacher_service import ensure_teacher_schema
 
@@ -38,7 +39,15 @@ class EditTimetableDialog(QDialog):
         self.start_time_input = QTimeEdit()
         self.end_time_input = QTimeEdit()
 
-        self.day_input.addItems(["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"])
+        for day_value, day_label in [
+            (1, "Lundi"),
+            (2, "Mardi"),
+            (3, "Mercredi"),
+            (4, "Jeudi"),
+            (5, "Vendredi"),
+            (6, "Samedi"),
+        ]:
+            self.day_input.addItem(day_label, day_value)
         self.start_time_input.setDisplayFormat("HH:mm")
         self.end_time_input.setDisplayFormat("HH:mm")
 
@@ -63,7 +72,7 @@ class EditTimetableDialog(QDialog):
 
         self.save_btn.clicked.connect(self.update_item)
         self.cancel_btn.clicked.connect(self.reject)
-        self.class_input.currentIndexChanged.connect(self.load_subjects_for_selected_class)
+        self.class_input.currentIndexChanged.connect(lambda _: self.load_subjects_for_selected_class())
 
         self.load_data()
 
@@ -100,6 +109,8 @@ class EditTimetableDialog(QDialog):
     def load_data(self):
         conn = get_connection()
         if not conn:
+            QMessageBox.critical(self, "Erreur", "Connexion base impossible")
+            self.reject()
             return
         try:
             cur = conn.cursor()
@@ -148,11 +159,13 @@ class EditTimetableDialog(QDialog):
             self.teacher_input.clear()
             cur.execute(
                 """
-                SELECT id, last_name || ' ' || first_name
+                SELECT
+                    id,
+                    last_name || ' ' || first_name ||
+                    CASE WHEN COALESCE(is_active, TRUE) THEN '' ELSE ' (Inactif)' END
                 FROM teachers
                 WHERE establishment_id=%s
-                  AND COALESCE(is_active, TRUE) = TRUE
-                ORDER BY last_name, first_name
+                ORDER BY COALESCE(is_active, TRUE) DESC, last_name, first_name
                 """,
                 (est_id,),
             )
@@ -161,8 +174,11 @@ class EditTimetableDialog(QDialog):
             self._select_combo(self.teacher_input, teacher_id)
 
             self._select_day(day)
-            self.start_time_input.setTime(QTime(start_time.hour, start_time.minute))
-            self.end_time_input.setTime(QTime(end_time.hour, end_time.minute))
+            self.start_time_input.setTime(self._to_qtime(start_time))
+            self.end_time_input.setTime(self._to_qtime(end_time))
+        except Exception as e:
+            show_error_dialog(self, "Erreur", "Chargement impossible.", e)
+            self.reject()
         finally:
             conn.close()
 
@@ -173,9 +189,40 @@ class EditTimetableDialog(QDialog):
                 return
 
     def _select_day(self, day):
-        idx = self.day_input.findText(day)
+        normalized_day = {
+            "1": "Lundi",
+            "2": "Mardi",
+            "3": "Mercredi",
+            "4": "Jeudi",
+            "5": "Vendredi",
+            "6": "Samedi",
+            "7": "Dimanche",
+        }.get(str(day), str(day))
+        numeric_day = {
+            "Lundi": 1,
+            "Mardi": 2,
+            "Mercredi": 3,
+            "Jeudi": 4,
+            "Vendredi": 5,
+            "Samedi": 6,
+            "Dimanche": 7,
+        }.get(normalized_day)
+        idx = self.day_input.findData(numeric_day)
+        if idx < 0:
+            idx = self.day_input.findText(normalized_day)
         if idx >= 0:
             self.day_input.setCurrentIndex(idx)
+
+    def _to_qtime(self, value):
+        if hasattr(value, "hour") and hasattr(value, "minute"):
+            return QTime(value.hour, value.minute)
+
+        text_value = str(value or "")
+        for time_format in ("HH:mm:ss", "HH:mm"):
+            parsed = QTime.fromString(text_value, time_format)
+            if parsed.isValid():
+                return parsed
+        return QTime(7, 30)
 
     def load_subjects_for_selected_class(self, selected_subject_id=None):
         self.subject_input.clear()
@@ -207,6 +254,8 @@ class EditTimetableDialog(QDialog):
 
             if self.subject_input.count() > 0:
                 self.subject_input.setCurrentIndex(selected_index)
+        except Exception as e:
+            show_error_dialog(self, "Erreur", "Chargement des matières impossible.", e)
         finally:
             conn.close()
 
@@ -215,9 +264,9 @@ class EditTimetableDialog(QDialog):
         class_id = self.class_input.currentData()
         subject_id = self.subject_input.currentData()
         teacher_id = self.teacher_input.currentData()
-        day = self.day_input.currentText()
-        start_time = self.start_time_input.time().toString("HH:mm")
-        end_time = self.end_time_input.time().toString("HH:mm")
+        day = self.day_input.currentData()
+        start_time = self.start_time_input.time().toPyTime()
+        end_time = self.end_time_input.time().toPyTime()
 
         if not all([school_year_id, class_id, subject_id, teacher_id]):
             QMessageBox.warning(self, "Validation", "Tous les champs sont obligatoires.")
@@ -252,7 +301,7 @@ class EditTimetableDialog(QDialog):
                 FROM timetables
                 WHERE id <> %s
                   AND class_id=%s AND school_year_id=%s AND day_of_week=%s
-                  AND NOT (end_time <= %s::time OR start_time >= %s::time)
+                  AND NOT (end_time <= %s OR start_time >= %s)
                 LIMIT 1
                 """,
                 (self.timetable_id, class_id, school_year_id, day, start_time, end_time),
@@ -267,7 +316,7 @@ class EditTimetableDialog(QDialog):
                 FROM timetables
                 WHERE id <> %s
                   AND teacher_id=%s AND school_year_id=%s AND day_of_week=%s
-                  AND NOT (end_time <= %s::time OR start_time >= %s::time)
+                  AND NOT (end_time <= %s OR start_time >= %s)
                 LIMIT 1
                 """,
                 (self.timetable_id, teacher_id, school_year_id, day, start_time, end_time),
@@ -301,6 +350,6 @@ class EditTimetableDialog(QDialog):
             self.accept()
         except Exception as e:
             conn.rollback()
-            QMessageBox.critical(self, "Erreur", f"Mise à jour impossible : {e}")
+            show_error_dialog(self, "Erreur", "Mise à jour impossible.", e)
         finally:
             conn.close()

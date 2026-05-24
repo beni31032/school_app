@@ -40,8 +40,8 @@ def _draw_school_header(c: canvas.Canvas, width: float, height: float, school_na
 
     c.setFillColor(colors.black)
     c.setFont("Helvetica-Bold", 7.5)
-    c.drawString(left, header_y, "MINISTERE DES ENSEIGNEMENTS")
-    c.drawString(left, header_y - 9, "PRIMAIRE ET SECONDAIRE")
+    c.drawString(left, header_y, "MINISTERE DE")
+    c.drawString(left, header_y - 9, "L'EDUCATION NATIONALE")
 
     c.drawRightString(right, header_y, "REPUBLIQUE TOGOLAISE")
     c.setFont("Helvetica", 6.4)

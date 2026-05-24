@@ -26,6 +26,8 @@ class AddStudentDialog(QDialog):
         self.form_layout = QFormLayout()
 
         self.matricule_input = QLineEdit()
+        self.matricule_input.setReadOnly(True)
+        self.matricule_input.setToolTip("Matricule généré automatiquement.")
         self.first_name_input = QLineEdit()
         self.last_name_input = QLineEdit()
 
@@ -72,6 +74,7 @@ class AddStudentDialog(QDialog):
         self.load_establishments()
         self.establishment_input.currentIndexChanged.connect(self.load_classes)
         self.load_classes()
+        self.load_next_matricule()
 
     def apply_local_styles(self):
         self.setStyleSheet(
@@ -219,8 +222,35 @@ class AddStudentDialog(QDialog):
         shutil.copy(self.photo_source_path, destination)
         return destination.replace("\\", "/")
 
+    def get_next_matricule(self) -> str | None:
+        conn = get_connection()
+        if not conn:
+            return None
+
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT COALESCE(MAX(CAST(matricule AS INTEGER)), 1199)
+                FROM students
+                WHERE matricule ~ '^[0-9]+$'
+                """
+            )
+            row = cursor.fetchone()
+            current_max = int(row[0] or 1199)
+            next_value = max(current_max + 1, 1200)
+            return str(next_value)
+        finally:
+            conn.close()
+
+    def load_next_matricule(self):
+        next_matricule = self.get_next_matricule()
+        if next_matricule is not None:
+            self.matricule_input.setText(next_matricule)
+        else:
+            self.matricule_input.clear()
+
     def save_student(self):
-        matricule = self.matricule_input.text().strip()
         first_name = self.first_name_input.text().strip()
         last_name = self.last_name_input.text().strip()
         birth_date = self.birth_date_input.date().toString("yyyy-MM-dd")
@@ -228,11 +258,11 @@ class AddStudentDialog(QDialog):
         establishment_id = self.establishment_input.currentData()
         class_id = self.class_input.currentData()
 
-        if not matricule or not first_name or not last_name:
+        if not first_name or not last_name:
             self.show_message(
                 QMessageBox.Icon.Warning,
                 "Validation",
-                "Matricule, prénom et nom sont obligatoires.",
+                "Prénom et nom sont obligatoires.",
             )
             return
 
@@ -258,6 +288,13 @@ class AddStudentDialog(QDialog):
 
         try:
             cursor = conn.cursor()
+            matricule = self.get_next_matricule()
+            if not matricule:
+                conn.rollback()
+                self.show_message(QMessageBox.Icon.Critical, "Erreur", "Génération du matricule impossible.")
+                return
+
+            self.matricule_input.setText(matricule)
 
             cursor.execute(
                 """

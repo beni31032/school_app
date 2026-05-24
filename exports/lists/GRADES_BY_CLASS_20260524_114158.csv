@@ -1,0 +1,651 @@
+Matricule;Nom;Prénom;Sexe;Matière;Note;Barème
+E1-CE1A-029;Agbodjan;Eric;Masculin;Anglais;6.50;10.00
+E1-CE1A-029;Agbodjan;Eric;Masculin;Calcul mental;6.70;10.00
+E1-CE1A-029;Agbodjan;Eric;Masculin;Chant;6.90;10.00
+E1-CE1A-029;Agbodjan;Eric;Masculin;Education artistique et culturelle;7.10;10.00
+E1-CE1A-029;Agbodjan;Eric;Masculin;Education sociale;7.20;10.00
+E1-CE1A-029;Agbodjan;Eric;Masculin;Informatique;7.40;10.00
+E1-CE1A-029;Agbodjan;Eric;Masculin;J'apprends à lire;7.60;10.00
+E1-CE1A-029;Agbodjan;Eric;Masculin;Je sais écrire les mots;7.80;10.00
+E1-CE1A-029;Agbodjan;Eric;Masculin;Je sais utiliser ce que j'ai appris;8.00;10.00
+E1-CE1A-029;Agbodjan;Eric;Masculin;Mathématiques;8.20;10.00
+E1-CE1A-029;Agbodjan;Eric;Masculin;Problème;8.40;10.00
+E1-CE1A-029;Agbodjan;Eric;Masculin;Sciences et technologies;8.60;10.00
+E1-CE1A-029;Agbodjan;Eric;Masculin;Sciences humaines;8.80;10.00
+E1-CE1A-025;Agbozo;Eugene;M;Anglais;7.00;10.00
+E1-CE1A-025;Agbozo;Eugene;M;Calcul mental;7.10;10.00
+E1-CE1A-025;Agbozo;Eugene;M;Chant;7.30;10.00
+E1-CE1A-025;Agbozo;Eugene;M;Education artistique et culturelle;7.50;10.00
+E1-CE1A-025;Agbozo;Eugene;M;Education sociale;7.70;10.00
+E1-CE1A-025;Agbozo;Eugene;M;Informatique;7.90;10.00
+E1-CE1A-025;Agbozo;Eugene;M;J'apprends à lire;8.10;10.00
+E1-CE1A-025;Agbozo;Eugene;M;Je sais écrire les mots;8.30;10.00
+E1-CE1A-025;Agbozo;Eugene;M;Je sais utiliser ce que j'ai appris;8.50;10.00
+E1-CE1A-025;Agbozo;Eugene;M;Mathématiques;8.70;10.00
+E1-CE1A-025;Agbozo;Eugene;M;Problème;8.90;10.00
+E1-CE1A-025;Agbozo;Eugene;M;Sciences et technologies;9.10;10.00
+E1-CE1A-025;Agbozo;Eugene;M;Sciences humaines;9.20;10.00
+E1-CE1A-039;Aka;Patricia;F;Anglais;7.40;10.00
+E1-CE1A-039;Aka;Patricia;F;Calcul mental;7.60;10.00
+E1-CE1A-039;Aka;Patricia;F;Chant;7.80;10.00
+E1-CE1A-039;Aka;Patricia;F;Education artistique et culturelle;8.00;10.00
+E1-CE1A-039;Aka;Patricia;F;Education sociale;8.20;10.00
+E1-CE1A-039;Aka;Patricia;F;Informatique;8.40;10.00
+E1-CE1A-039;Aka;Patricia;F;J'apprends à lire;8.60;10.00
+E1-CE1A-039;Aka;Patricia;F;Je sais écrire les mots;8.80;10.00
+E1-CE1A-039;Aka;Patricia;F;Je sais utiliser ce que j'ai appris;8.90;10.00
+E1-CE1A-039;Aka;Patricia;F;Mathématiques;9.10;10.00
+E1-CE1A-039;Aka;Patricia;F;Problème;9.30;10.00
+E1-CE1A-039;Aka;Patricia;F;Sciences et technologies;9.50;10.00
+E1-CE1A-039;Aka;Patricia;F;Sciences humaines;5.60;10.00
+E1-CE1A-016;Aklesso;Khadija;F;Anglais;7.90;10.00
+E1-CE1A-016;Aklesso;Khadija;F;Calcul mental;8.10;10.00
+E1-CE1A-016;Aklesso;Khadija;F;Chant;8.30;10.00
+E1-CE1A-016;Aklesso;Khadija;F;Education artistique et culturelle;8.50;10.00
+E1-CE1A-016;Aklesso;Khadija;F;Education sociale;8.70;10.00
+E1-CE1A-016;Aklesso;Khadija;F;Informatique;8.80;10.00
+E1-CE1A-016;Aklesso;Khadija;F;J'apprends à lire;9.00;10.00
+E1-CE1A-016;Aklesso;Khadija;F;Je sais écrire les mots;9.20;10.00
+E1-CE1A-016;Aklesso;Khadija;F;Je sais utiliser ce que j'ai appris;9.40;10.00
+E1-CE1A-016;Aklesso;Khadija;F;Mathématiques;9.60;10.00
+E1-CE1A-016;Aklesso;Khadija;F;Problème;5.70;10.00
+E1-CE1A-016;Aklesso;Khadija;F;Sciences et technologies;5.90;10.00
+E1-CE1A-016;Aklesso;Khadija;F;Sciences humaines;6.10;10.00
+E1-CE1A-046;Aklesso;Stella;F;Anglais;8.40;10.00
+E1-CE1A-046;Aklesso;Stella;F;Calcul mental;8.60;10.00
+E1-CE1A-046;Aklesso;Stella;F;Chant;8.80;10.00
+E1-CE1A-046;Aklesso;Stella;F;Education artistique et culturelle;8.90;10.00
+E1-CE1A-046;Aklesso;Stella;F;Education sociale;9.10;10.00
+E1-CE1A-046;Aklesso;Stella;F;Informatique;9.30;10.00
+E1-CE1A-046;Aklesso;Stella;F;J'apprends à lire;9.50;10.00
+E1-CE1A-046;Aklesso;Stella;F;Je sais écrire les mots;5.60;10.00
+E1-CE1A-046;Aklesso;Stella;F;Je sais utiliser ce que j'ai appris;5.80;10.00
+E1-CE1A-046;Aklesso;Stella;F;Mathématiques;6.00;10.00
+E1-CE1A-046;Aklesso;Stella;F;Problème;6.20;10.00
+E1-CE1A-046;Aklesso;Stella;F;Sciences et technologies;6.40;10.00
+E1-CE1A-046;Aklesso;Stella;F;Sciences humaines;6.60;10.00
+E1-CE1A-013;Ali;Elisabeth;F;Anglais;8.80;10.00
+E1-CE1A-013;Ali;Elisabeth;F;Calcul mental;9.00;10.00
+E1-CE1A-013;Ali;Elisabeth;F;Chant;9.20;10.00
+E1-CE1A-013;Ali;Elisabeth;F;Education artistique et culturelle;9.40;10.00
+E1-CE1A-013;Ali;Elisabeth;F;Education sociale;9.60;10.00
+E1-CE1A-013;Ali;Elisabeth;F;Informatique;5.70;10.00
+E1-CE1A-013;Ali;Elisabeth;F;J'apprends à lire;5.90;10.00
+E1-CE1A-013;Ali;Elisabeth;F;Je sais écrire les mots;6.10;10.00
+E1-CE1A-013;Ali;Elisabeth;F;Je sais utiliser ce que j'ai appris;6.30;10.00
+E1-CE1A-013;Ali;Elisabeth;F;Mathématiques;6.50;10.00
+E1-CE1A-013;Ali;Elisabeth;F;Problème;6.60;10.00
+E1-CE1A-013;Ali;Elisabeth;F;Sciences et technologies;6.80;10.00
+E1-CE1A-013;Ali;Elisabeth;F;Sciences humaines;7.00;10.00
+E1-CE1A-027;Amani;Akouvi;F;Anglais;9.30;10.00
+E1-CE1A-027;Amani;Akouvi;F;Calcul mental;9.50;10.00
+E1-CE1A-027;Amani;Akouvi;F;Chant;9.70;10.00
+E1-CE1A-027;Amani;Akouvi;F;Education artistique et culturelle;5.80;10.00
+E1-CE1A-027;Amani;Akouvi;F;Education sociale;6.00;10.00
+E1-CE1A-027;Amani;Akouvi;F;Informatique;6.20;10.00
+E1-CE1A-027;Amani;Akouvi;F;J'apprends à lire;6.40;10.00
+E1-CE1A-027;Amani;Akouvi;F;Je sais écrire les mots;6.50;10.00
+E1-CE1A-027;Amani;Akouvi;F;Je sais utiliser ce que j'ai appris;6.70;10.00
+E1-CE1A-027;Amani;Akouvi;F;Mathématiques;6.90;10.00
+E1-CE1A-027;Amani;Akouvi;F;Problème;7.10;10.00
+E1-CE1A-027;Amani;Akouvi;F;Sciences et technologies;7.30;10.00
+E1-CE1A-027;Amani;Akouvi;F;Sciences humaines;7.50;10.00
+E1-CE1A-002;Amavi;Suzanne;F;Anglais;5.70;10.00
+E1-CE1A-002;Amavi;Suzanne;F;Calcul mental;5.90;10.00
+E1-CE1A-002;Amavi;Suzanne;F;Chant;6.10;10.00
+E1-CE1A-002;Amavi;Suzanne;F;Education artistique et culturelle;6.20;10.00
+E1-CE1A-002;Amavi;Suzanne;F;Education sociale;6.40;10.00
+E1-CE1A-002;Amavi;Suzanne;F;Informatique;6.60;10.00
+E1-CE1A-002;Amavi;Suzanne;F;J'apprends à lire;6.80;10.00
+E1-CE1A-002;Amavi;Suzanne;F;Je sais écrire les mots;7.00;10.00
+E1-CE1A-002;Amavi;Suzanne;F;Je sais utiliser ce que j'ai appris;7.20;10.00
+E1-CE1A-002;Amavi;Suzanne;F;Mathématiques;7.40;10.00
+E1-CE1A-002;Amavi;Suzanne;F;Problème;7.60;10.00
+E1-CE1A-002;Amavi;Suzanne;F;Sciences et technologies;7.80;10.00
+E1-CE1A-002;Amavi;Suzanne;F;Sciences humaines;8.00;10.00
+E1-CE1A-043;Assi;Mawuli;M;Anglais;6.20;10.00
+E1-CE1A-043;Assi;Mawuli;M;Calcul mental;6.30;10.00
+E1-CE1A-043;Assi;Mawuli;M;Chant;6.50;10.00
+E1-CE1A-043;Assi;Mawuli;M;Education artistique et culturelle;6.70;10.00
+E1-CE1A-043;Assi;Mawuli;M;Education sociale;6.90;10.00
+E1-CE1A-043;Assi;Mawuli;M;Informatique;7.10;10.00
+E1-CE1A-043;Assi;Mawuli;M;J'apprends à lire;7.30;10.00
+E1-CE1A-043;Assi;Mawuli;M;Je sais écrire les mots;7.50;10.00
+E1-CE1A-043;Assi;Mawuli;M;Je sais utiliser ce que j'ai appris;7.70;10.00
+E1-CE1A-043;Assi;Mawuli;M;Mathématiques;7.90;10.00
+E1-CE1A-043;Assi;Mawuli;M;Problème;8.10;10.00
+E1-CE1A-043;Assi;Mawuli;M;Sciences et technologies;8.20;10.00
+E1-CE1A-043;Assi;Mawuli;M;Sciences humaines;8.40;10.00
+E1-CE1A-007;Atakora;Gilbert;M;Anglais;6.60;10.00
+E1-CE1A-007;Atakora;Gilbert;M;Calcul mental;6.80;10.00
+E1-CE1A-007;Atakora;Gilbert;M;Chant;7.00;10.00
+E1-CE1A-007;Atakora;Gilbert;M;Education artistique et culturelle;7.20;10.00
+E1-CE1A-007;Atakora;Gilbert;M;Education sociale;7.40;10.00
+E1-CE1A-007;Atakora;Gilbert;M;Informatique;7.60;10.00
+E1-CE1A-007;Atakora;Gilbert;M;J'apprends à lire;7.80;10.00
+E1-CE1A-007;Atakora;Gilbert;M;Je sais écrire les mots;7.90;10.00
+E1-CE1A-007;Atakora;Gilbert;M;Je sais utiliser ce que j'ai appris;8.10;10.00
+E1-CE1A-007;Atakora;Gilbert;M;Mathématiques;8.30;10.00
+E1-CE1A-007;Atakora;Gilbert;M;Problème;8.50;10.00
+E1-CE1A-007;Atakora;Gilbert;M;Sciences et technologies;8.70;10.00
+E1-CE1A-007;Atakora;Gilbert;M;Sciences humaines;8.90;10.00
+E1-CE1A-008;Atakora;Joelle;F;Anglais;7.10;10.00
+E1-CE1A-008;Atakora;Joelle;F;Calcul mental;7.30;10.00
+E1-CE1A-008;Atakora;Joelle;F;Chant;7.50;10.00
+E1-CE1A-008;Atakora;Joelle;F;Education artistique et culturelle;7.70;10.00
+E1-CE1A-008;Atakora;Joelle;F;Education sociale;7.90;10.00
+E1-CE1A-008;Atakora;Joelle;F;Informatique;8.00;10.00
+E1-CE1A-008;Atakora;Joelle;F;J'apprends à lire;8.20;10.00
+E1-CE1A-008;Atakora;Joelle;F;Je sais écrire les mots;8.40;10.00
+E1-CE1A-008;Atakora;Joelle;F;Je sais utiliser ce que j'ai appris;8.60;10.00
+E1-CE1A-008;Atakora;Joelle;F;Mathématiques;8.80;10.00
+E1-CE1A-008;Atakora;Joelle;F;Problème;9.00;10.00
+E1-CE1A-008;Atakora;Joelle;F;Sciences et technologies;9.20;10.00
+E1-CE1A-008;Atakora;Joelle;F;Sciences humaines;9.40;10.00
+E1-CE1A-009;Ayi;Benoit;M;Anglais;7.60;10.00
+E1-CE1A-009;Ayi;Benoit;M;Calcul mental;7.80;10.00
+E1-CE1A-009;Ayi;Benoit;M;Chant;7.90;10.00
+E1-CE1A-009;Ayi;Benoit;M;Education artistique et culturelle;8.10;10.00
+E1-CE1A-009;Ayi;Benoit;M;Education sociale;8.30;10.00
+E1-CE1A-009;Ayi;Benoit;M;Informatique;8.50;10.00
+E1-CE1A-009;Ayi;Benoit;M;J'apprends à lire;8.70;10.00
+E1-CE1A-009;Ayi;Benoit;M;Je sais écrire les mots;8.90;10.00
+E1-CE1A-009;Ayi;Benoit;M;Je sais utiliser ce que j'ai appris;9.10;10.00
+E1-CE1A-009;Ayi;Benoit;M;Mathématiques;9.30;10.00
+E1-CE1A-009;Ayi;Benoit;M;Problème;9.50;10.00
+E1-CE1A-009;Ayi;Benoit;M;Sciences et technologies;9.70;10.00
+E1-CE1A-009;Ayi;Benoit;M;Sciences humaines;5.70;10.00
+E1-CE1A-033;Ayi;Fati;F;Anglais;8.00;10.00
+E1-CE1A-033;Ayi;Fati;F;Calcul mental;8.20;10.00
+E1-CE1A-033;Ayi;Fati;F;Chant;8.40;10.00
+E1-CE1A-033;Ayi;Fati;F;Education artistique et culturelle;8.60;10.00
+E1-CE1A-033;Ayi;Fati;F;Education sociale;8.80;10.00
+E1-CE1A-033;Ayi;Fati;F;Informatique;9.00;10.00
+E1-CE1A-033;Ayi;Fati;F;J'apprends à lire;9.20;10.00
+E1-CE1A-033;Ayi;Fati;F;Je sais écrire les mots;9.40;10.00
+E1-CE1A-033;Ayi;Fati;F;Je sais utiliser ce que j'ai appris;9.50;10.00
+E1-CE1A-033;Ayi;Fati;F;Mathématiques;5.60;10.00
+E1-CE1A-033;Ayi;Fati;F;Problème;5.80;10.00
+E1-CE1A-033;Ayi;Fati;F;Sciences et technologies;6.00;10.00
+E1-CE1A-033;Ayi;Fati;F;Sciences humaines;6.20;10.00
+E1-CE1A-017;Badji;Ghislaine;F;Anglais;8.50;10.00
+E1-CE1A-017;Badji;Ghislaine;F;Calcul mental;8.70;10.00
+E1-CE1A-017;Badji;Ghislaine;F;Chant;8.90;10.00
+E1-CE1A-017;Badji;Ghislaine;F;Education artistique et culturelle;9.10;10.00
+E1-CE1A-017;Badji;Ghislaine;F;Education sociale;9.30;10.00
+E1-CE1A-017;Badji;Ghislaine;F;Informatique;9.50;10.00
+E1-CE1A-017;Badji;Ghislaine;F;J'apprends à lire;9.60;10.00
+E1-CE1A-017;Badji;Ghislaine;F;Je sais écrire les mots;5.70;10.00
+E1-CE1A-017;Badji;Ghislaine;F;Je sais utiliser ce que j'ai appris;5.90;10.00
+E1-CE1A-017;Badji;Ghislaine;F;Mathématiques;6.10;10.00
+E1-CE1A-017;Badji;Ghislaine;F;Problème;6.30;10.00
+E1-CE1A-017;Badji;Ghislaine;F;Sciences et technologies;6.50;10.00
+E1-CE1A-017;Badji;Ghislaine;F;Sciences humaines;6.70;10.00
+E1-CE1A-012;Bamba;Khadija;F;Anglais;9.00;10.00
+E1-CE1A-012;Bamba;Khadija;F;Calcul mental;9.20;10.00
+E1-CE1A-012;Bamba;Khadija;F;Chant;9.40;10.00
+E1-CE1A-012;Bamba;Khadija;F;Education artistique et culturelle;9.50;10.00
+E1-CE1A-012;Bamba;Khadija;F;Education sociale;5.60;10.00
+E1-CE1A-012;Bamba;Khadija;F;Informatique;5.80;10.00
+E1-CE1A-012;Bamba;Khadija;F;J'apprends à lire;6.00;10.00
+E1-CE1A-012;Bamba;Khadija;F;Je sais écrire les mots;6.20;10.00
+E1-CE1A-012;Bamba;Khadija;F;Je sais utiliser ce que j'ai appris;6.40;10.00
+E1-CE1A-012;Bamba;Khadija;F;Mathématiques;6.60;10.00
+E1-CE1A-012;Bamba;Khadija;F;Problème;6.80;10.00
+E1-CE1A-012;Bamba;Khadija;F;Sciences et technologies;7.00;10.00
+E1-CE1A-012;Bamba;Khadija;F;Sciences humaines;7.20;10.00
+E1-CE1A-028;Dado;Cynthia;F;Anglais;9.40;10.00
+E1-CE1A-028;Dado;Cynthia;F;Calcul mental;9.60;10.00
+E1-CE1A-028;Dado;Cynthia;F;Chant;5.70;10.00
+E1-CE1A-028;Dado;Cynthia;F;Education artistique et culturelle;5.90;10.00
+E1-CE1A-028;Dado;Cynthia;F;Education sociale;6.10;10.00
+E1-CE1A-028;Dado;Cynthia;F;Informatique;6.30;10.00
+E1-CE1A-028;Dado;Cynthia;F;J'apprends à lire;6.50;10.00
+E1-CE1A-028;Dado;Cynthia;F;Je sais écrire les mots;6.70;10.00
+E1-CE1A-028;Dado;Cynthia;F;Je sais utiliser ce que j'ai appris;6.90;10.00
+E1-CE1A-028;Dado;Cynthia;F;Mathématiques;7.10;10.00
+E1-CE1A-028;Dado;Cynthia;F;Problème;7.20;10.00
+E1-CE1A-028;Dado;Cynthia;F;Sciences et technologies;7.40;10.00
+E1-CE1A-028;Dado;Cynthia;F;Sciences humaines;7.60;10.00
+E1-CE1A-014;Dado;Khadija;F;Anglais;5.80;10.00
+E1-CE1A-014;Dado;Khadija;F;Calcul mental;6.00;10.00
+E1-CE1A-014;Dado;Khadija;F;Chant;6.20;10.00
+E1-CE1A-014;Dado;Khadija;F;Education artistique et culturelle;6.40;10.00
+E1-CE1A-014;Dado;Khadija;F;Education sociale;6.60;10.00
+E1-CE1A-014;Dado;Khadija;F;Informatique;6.80;10.00
+E1-CE1A-014;Dado;Khadija;F;J'apprends à lire;7.00;10.00
+E1-CE1A-014;Dado;Khadija;F;Je sais écrire les mots;7.10;10.00
+E1-CE1A-014;Dado;Khadija;F;Je sais utiliser ce que j'ai appris;7.30;10.00
+E1-CE1A-014;Dado;Khadija;F;Mathématiques;7.50;10.00
+E1-CE1A-014;Dado;Khadija;F;Problème;7.70;10.00
+E1-CE1A-014;Dado;Khadija;F;Sciences et technologies;7.90;10.00
+E1-CE1A-014;Dado;Khadija;F;Sciences humaines;8.10;10.00
+E1-CE1A-020;Dado;Tatiana;F;Anglais;6.30;10.00
+E1-CE1A-020;Dado;Tatiana;F;Calcul mental;6.50;10.00
+E1-CE1A-020;Dado;Tatiana;F;Chant;6.70;10.00
+E1-CE1A-020;Dado;Tatiana;F;Education artistique et culturelle;6.80;10.00
+E1-CE1A-020;Dado;Tatiana;F;Education sociale;7.00;10.00
+E1-CE1A-020;Dado;Tatiana;F;Informatique;7.20;10.00
+E1-CE1A-020;Dado;Tatiana;F;J'apprends à lire;7.40;10.00
+E1-CE1A-020;Dado;Tatiana;F;Je sais écrire les mots;7.60;10.00
+E1-CE1A-020;Dado;Tatiana;F;Je sais utiliser ce que j'ai appris;7.80;10.00
+E1-CE1A-020;Dado;Tatiana;F;Mathématiques;8.00;10.00
+E1-CE1A-020;Dado;Tatiana;F;Problème;8.20;10.00
+E1-CE1A-020;Dado;Tatiana;F;Sciences et technologies;8.40;10.00
+E1-CE1A-020;Dado;Tatiana;F;Sciences humaines;8.60;10.00
+E1-CE1A-031;Dadzie;Grace;F;Anglais;6.80;10.00
+E1-CE1A-031;Dadzie;Grace;F;Calcul mental;6.90;10.00
+E1-CE1A-031;Dadzie;Grace;F;Chant;7.10;10.00
+E1-CE1A-031;Dadzie;Grace;F;Education artistique et culturelle;7.30;10.00
+E1-CE1A-031;Dadzie;Grace;F;Education sociale;7.50;10.00
+E1-CE1A-031;Dadzie;Grace;F;Informatique;7.70;10.00
+E1-CE1A-031;Dadzie;Grace;F;J'apprends à lire;7.90;10.00
+E1-CE1A-031;Dadzie;Grace;F;Je sais écrire les mots;8.10;10.00
+E1-CE1A-031;Dadzie;Grace;F;Je sais utiliser ce que j'ai appris;8.30;10.00
+E1-CE1A-031;Dadzie;Grace;F;Mathématiques;8.50;10.00
+E1-CE1A-031;Dadzie;Grace;F;Problème;8.70;10.00
+E1-CE1A-031;Dadzie;Grace;F;Sciences et technologies;8.80;10.00
+E1-CE1A-031;Dadzie;Grace;F;Sciences humaines;9.00;10.00
+E1-CE1A-035;Diallo;Kwadjo;M;Anglais;7.20;10.00
+E1-CE1A-035;Diallo;Kwadjo;M;Calcul mental;7.40;10.00
+E1-CE1A-035;Diallo;Kwadjo;M;Chant;7.60;10.00
+E1-CE1A-035;Diallo;Kwadjo;M;Education artistique et culturelle;7.80;10.00
+E1-CE1A-035;Diallo;Kwadjo;M;Education sociale;8.00;10.00
+E1-CE1A-035;Diallo;Kwadjo;M;Informatique;8.20;10.00
+E1-CE1A-035;Diallo;Kwadjo;M;J'apprends à lire;8.40;10.00
+E1-CE1A-035;Diallo;Kwadjo;M;Je sais écrire les mots;8.50;10.00
+E1-CE1A-035;Diallo;Kwadjo;M;Je sais utiliser ce que j'ai appris;8.70;10.00
+E1-CE1A-035;Diallo;Kwadjo;M;Mathématiques;8.90;10.00
+E1-CE1A-035;Diallo;Kwadjo;M;Problème;9.10;10.00
+E1-CE1A-035;Diallo;Kwadjo;M;Sciences et technologies;9.30;10.00
+E1-CE1A-035;Diallo;Kwadjo;M;Sciences humaines;9.50;10.00
+E1-CE1A-023;Dogo;Afi;F;Anglais;7.70;10.00
+E1-CE1A-023;Dogo;Afi;F;Calcul mental;7.90;10.00
+E1-CE1A-023;Dogo;Afi;F;Chant;8.10;10.00
+E1-CE1A-023;Dogo;Afi;F;Education artistique et culturelle;8.30;10.00
+E1-CE1A-023;Dogo;Afi;F;Education sociale;8.40;10.00
+E1-CE1A-023;Dogo;Afi;F;Informatique;8.60;10.00
+E1-CE1A-023;Dogo;Afi;F;J'apprends à lire;8.80;10.00
+E1-CE1A-023;Dogo;Afi;F;Je sais écrire les mots;9.00;10.00
+E1-CE1A-023;Dogo;Afi;F;Je sais utiliser ce que j'ai appris;9.20;10.00
+E1-CE1A-023;Dogo;Afi;F;Mathématiques;9.40;10.00
+E1-CE1A-023;Dogo;Afi;F;Problème;9.60;10.00
+E1-CE1A-023;Dogo;Afi;F;Sciences et technologies;5.70;10.00
+E1-CE1A-023;Dogo;Afi;F;Sciences humaines;5.90;10.00
+E1-CE1A-045;Dossa;Yawovi;M;Anglais;8.20;10.00
+E1-CE1A-045;Dossa;Yawovi;M;Calcul mental;8.40;10.00
+E1-CE1A-045;Dossa;Yawovi;M;Chant;8.50;10.00
+E1-CE1A-045;Dossa;Yawovi;M;Education artistique et culturelle;8.70;10.00
+E1-CE1A-045;Dossa;Yawovi;M;Education sociale;8.90;10.00
+E1-CE1A-045;Dossa;Yawovi;M;Informatique;9.10;10.00
+E1-CE1A-045;Dossa;Yawovi;M;J'apprends à lire;9.30;10.00
+E1-CE1A-045;Dossa;Yawovi;M;Je sais écrire les mots;9.50;10.00
+E1-CE1A-045;Dossa;Yawovi;M;Je sais utiliser ce que j'ai appris;9.70;10.00
+E1-CE1A-045;Dossa;Yawovi;M;Mathématiques;5.80;10.00
+E1-CE1A-045;Dossa;Yawovi;M;Problème;6.00;10.00
+E1-CE1A-045;Dossa;Yawovi;M;Sciences et technologies;6.20;10.00
+E1-CE1A-045;Dossa;Yawovi;M;Sciences humaines;6.30;10.00
+E1-CE1A-021;Fiogbe;Kenny;M;Anglais;8.60;10.00
+E1-CE1A-021;Fiogbe;Kenny;M;Calcul mental;8.80;10.00
+E1-CE1A-021;Fiogbe;Kenny;M;Chant;9.00;10.00
+E1-CE1A-021;Fiogbe;Kenny;M;Education artistique et culturelle;9.20;10.00
+E1-CE1A-021;Fiogbe;Kenny;M;Education sociale;9.40;10.00
+E1-CE1A-021;Fiogbe;Kenny;M;Informatique;9.60;10.00
+E1-CE1A-021;Fiogbe;Kenny;M;J'apprends à lire;5.70;10.00
+E1-CE1A-021;Fiogbe;Kenny;M;Je sais écrire les mots;5.90;10.00
+E1-CE1A-021;Fiogbe;Kenny;M;Je sais utiliser ce que j'ai appris;6.10;10.00
+E1-CE1A-021;Fiogbe;Kenny;M;Mathématiques;6.20;10.00
+E1-CE1A-021;Fiogbe;Kenny;M;Problème;6.40;10.00
+E1-CE1A-021;Fiogbe;Kenny;M;Sciences et technologies;6.60;10.00
+E1-CE1A-021;Fiogbe;Kenny;M;Sciences humaines;6.80;10.00
+E1-CE1A-048;Gnassingbe;Pascal;M;Anglais;9.10;10.00
+E1-CE1A-048;Gnassingbe;Pascal;M;Calcul mental;9.30;10.00
+E1-CE1A-048;Gnassingbe;Pascal;M;Chant;9.50;10.00
+E1-CE1A-048;Gnassingbe;Pascal;M;Education artistique et culturelle;9.70;10.00
+E1-CE1A-048;Gnassingbe;Pascal;M;Education sociale;5.80;10.00
+E1-CE1A-048;Gnassingbe;Pascal;M;Informatique;6.00;10.00
+E1-CE1A-048;Gnassingbe;Pascal;M;J'apprends à lire;6.10;10.00
+E1-CE1A-048;Gnassingbe;Pascal;M;Je sais écrire les mots;6.30;10.00
+E1-CE1A-048;Gnassingbe;Pascal;M;Je sais utiliser ce que j'ai appris;6.50;10.00
+E1-CE1A-048;Gnassingbe;Pascal;M;Mathématiques;6.70;10.00
+E1-CE1A-048;Gnassingbe;Pascal;M;Problème;6.90;10.00
+E1-CE1A-048;Gnassingbe;Pascal;M;Sciences et technologies;7.10;10.00
+E1-CE1A-048;Gnassingbe;Pascal;M;Sciences humaines;7.30;10.00
+E1-CE1A-026;Gnawoto;Octave;M;Anglais;9.60;10.00
+E1-CE1A-026;Gnawoto;Octave;M;Calcul mental;5.70;10.00
+E1-CE1A-026;Gnawoto;Octave;M;Chant;5.90;10.00
+E1-CE1A-026;Gnawoto;Octave;M;Education artistique et culturelle;6.00;10.00
+E1-CE1A-026;Gnawoto;Octave;M;Education sociale;6.20;10.00
+E1-CE1A-026;Gnawoto;Octave;M;Informatique;6.40;10.00
+E1-CE1A-026;Gnawoto;Octave;M;J'apprends à lire;6.60;10.00
+E1-CE1A-026;Gnawoto;Octave;M;Je sais écrire les mots;6.80;10.00
+E1-CE1A-026;Gnawoto;Octave;M;Je sais utiliser ce que j'ai appris;7.00;10.00
+E1-CE1A-026;Gnawoto;Octave;M;Mathématiques;7.20;10.00
+E1-CE1A-026;Gnawoto;Octave;M;Problème;7.40;10.00
+E1-CE1A-026;Gnawoto;Octave;M;Sciences et technologies;7.60;10.00
+E1-CE1A-026;Gnawoto;Octave;M;Sciences humaines;7.80;10.00
+E1-CE1A-006;Hounkpe;Afiavi;M;Anglais;5.90;10.00
+E1-CE1A-006;Hounkpe;Afiavi;M;Calcul mental;6.10;10.00
+E1-CE1A-006;Hounkpe;Afiavi;M;Chant;6.30;10.00
+E1-CE1A-006;Hounkpe;Afiavi;M;Education artistique et culturelle;6.50;10.00
+E1-CE1A-006;Hounkpe;Afiavi;M;Education sociale;6.70;10.00
+E1-CE1A-006;Hounkpe;Afiavi;M;Informatique;6.90;10.00
+E1-CE1A-006;Hounkpe;Afiavi;M;J'apprends à lire;7.10;10.00
+E1-CE1A-006;Hounkpe;Afiavi;M;Je sais écrire les mots;7.30;10.00
+E1-CE1A-006;Hounkpe;Afiavi;M;Je sais utiliser ce que j'ai appris;7.50;10.00
+E1-CE1A-006;Hounkpe;Afiavi;M;Mathématiques;7.70;10.00
+E1-CE1A-006;Hounkpe;Afiavi;M;Problème;7.80;10.00
+E1-CE1A-006;Hounkpe;Afiavi;M;Sciences et technologies;8.00;10.00
+E1-CE1A-006;Hounkpe;Afiavi;M;Sciences humaines;8.20;10.00
+E1-CE1A-019;Kafui;Abla;F;Anglais;6.40;10.00
+E1-CE1A-019;Kafui;Abla;F;Calcul mental;6.60;10.00
+E1-CE1A-019;Kafui;Abla;F;Chant;6.80;10.00
+E1-CE1A-019;Kafui;Abla;F;Education artistique et culturelle;7.00;10.00
+E1-CE1A-019;Kafui;Abla;F;Education sociale;7.20;10.00
+E1-CE1A-019;Kafui;Abla;F;Informatique;7.40;10.00
+E1-CE1A-019;Kafui;Abla;F;J'apprends à lire;7.60;10.00
+E1-CE1A-019;Kafui;Abla;F;Je sais écrire les mots;7.70;10.00
+E1-CE1A-019;Kafui;Abla;F;Je sais utiliser ce que j'ai appris;7.90;10.00
+E1-CE1A-019;Kafui;Abla;F;Mathématiques;8.10;10.00
+E1-CE1A-019;Kafui;Abla;F;Problème;8.30;10.00
+E1-CE1A-019;Kafui;Abla;F;Sciences et technologies;8.50;10.00
+E1-CE1A-019;Kafui;Abla;F;Sciences humaines;8.70;10.00
+E1-CE1A-047;Kafui;Noel;M;Anglais;6.90;10.00
+E1-CE1A-047;Kafui;Noel;M;Calcul mental;7.10;10.00
+E1-CE1A-047;Kafui;Noel;M;Chant;7.30;10.00
+E1-CE1A-047;Kafui;Noel;M;Education artistique et culturelle;7.50;10.00
+E1-CE1A-047;Kafui;Noel;M;Education sociale;7.60;10.00
+E1-CE1A-047;Kafui;Noel;M;Informatique;7.80;10.00
+E1-CE1A-047;Kafui;Noel;M;J'apprends à lire;8.00;10.00
+E1-CE1A-047;Kafui;Noel;M;Je sais écrire les mots;8.20;10.00
+E1-CE1A-047;Kafui;Noel;M;Je sais utiliser ce que j'ai appris;8.40;10.00
+E1-CE1A-047;Kafui;Noel;M;Mathématiques;8.60;10.00
+E1-CE1A-047;Kafui;Noel;M;Problème;8.80;10.00
+E1-CE1A-047;Kafui;Noel;M;Sciences et technologies;9.00;10.00
+E1-CE1A-047;Kafui;Noel;M;Sciences humaines;9.20;10.00
+E1-CE1A-037;Kagni;Kouassi;M;Anglais;7.30;10.00
+E1-CE1A-037;Kagni;Kouassi;M;Calcul mental;7.50;10.00
+E1-CE1A-037;Kagni;Kouassi;M;Chant;7.70;10.00
+E1-CE1A-037;Kagni;Kouassi;M;Education artistique et culturelle;7.90;10.00
+E1-CE1A-037;Kagni;Kouassi;M;Education sociale;8.10;10.00
+E1-CE1A-037;Kagni;Kouassi;M;Informatique;8.30;10.00
+E1-CE1A-037;Kagni;Kouassi;M;J'apprends à lire;8.50;10.00
+E1-CE1A-037;Kagni;Kouassi;M;Je sais écrire les mots;8.70;10.00
+E1-CE1A-037;Kagni;Kouassi;M;Je sais utiliser ce que j'ai appris;8.90;10.00
+E1-CE1A-037;Kagni;Kouassi;M;Mathématiques;9.10;10.00
+E1-CE1A-037;Kagni;Kouassi;M;Problème;9.20;10.00
+E1-CE1A-037;Kagni;Kouassi;M;Sciences et technologies;9.40;10.00
+E1-CE1A-037;Kagni;Kouassi;M;Sciences humaines;9.60;10.00
+E1-CE1A-010;Komi;Suzanne;F;Anglais;7.80;10.00
+E1-CE1A-010;Komi;Suzanne;F;Calcul mental;8.00;10.00
+E1-CE1A-010;Komi;Suzanne;F;Chant;8.20;10.00
+E1-CE1A-010;Komi;Suzanne;F;Education artistique et culturelle;8.40;10.00
+E1-CE1A-010;Komi;Suzanne;F;Education sociale;8.60;10.00
+E1-CE1A-010;Komi;Suzanne;F;Informatique;8.80;10.00
+E1-CE1A-010;Komi;Suzanne;F;J'apprends à lire;9.00;10.00
+E1-CE1A-010;Komi;Suzanne;F;Je sais écrire les mots;9.20;10.00
+E1-CE1A-010;Komi;Suzanne;F;Je sais utiliser ce que j'ai appris;9.30;10.00
+E1-CE1A-010;Komi;Suzanne;F;Mathématiques;9.50;10.00
+E1-CE1A-010;Komi;Suzanne;F;Problème;5.60;10.00
+E1-CE1A-010;Komi;Suzanne;F;Sciences et technologies;5.80;10.00
+E1-CE1A-010;Komi;Suzanne;F;Sciences humaines;6.00;10.00
+E1-CE1A-003;Kossi;Afiwa;F;Anglais;8.30;10.00
+E1-CE1A-003;Kossi;Afiwa;F;Calcul mental;8.50;10.00
+E1-CE1A-003;Kossi;Afiwa;F;Chant;8.70;10.00
+E1-CE1A-003;Kossi;Afiwa;F;Education artistique et culturelle;8.90;10.00
+E1-CE1A-003;Kossi;Afiwa;F;Education sociale;9.00;10.00
+E1-CE1A-003;Kossi;Afiwa;F;Informatique;9.20;10.00
+E1-CE1A-003;Kossi;Afiwa;F;J'apprends à lire;9.40;10.00
+E1-CE1A-003;Kossi;Afiwa;F;Je sais écrire les mots;9.60;10.00
+E1-CE1A-003;Kossi;Afiwa;F;Je sais utiliser ce que j'ai appris;5.70;10.00
+E1-CE1A-003;Kossi;Afiwa;F;Mathématiques;5.90;10.00
+E1-CE1A-003;Kossi;Afiwa;F;Problème;6.10;10.00
+E1-CE1A-003;Kossi;Afiwa;F;Sciences et technologies;6.30;10.00
+E1-CE1A-003;Kossi;Afiwa;F;Sciences humaines;6.50;10.00
+E1-CE1A-015;Kossi;Ami;F;Anglais;8.80;10.00
+E1-CE1A-015;Kossi;Ami;F;Calcul mental;9.00;10.00
+E1-CE1A-015;Kossi;Ami;F;Chant;9.10;10.00
+E1-CE1A-015;Kossi;Ami;F;Education artistique et culturelle;9.30;10.00
+E1-CE1A-015;Kossi;Ami;F;Education sociale;9.50;10.00
+E1-CE1A-015;Kossi;Ami;F;Informatique;5.60;10.00
+E1-CE1A-015;Kossi;Ami;F;J'apprends à lire;5.80;10.00
+E1-CE1A-015;Kossi;Ami;F;Je sais écrire les mots;6.00;10.00
+E1-CE1A-015;Kossi;Ami;F;Je sais utiliser ce que j'ai appris;6.20;10.00
+E1-CE1A-015;Kossi;Ami;F;Mathématiques;6.40;10.00
+E1-CE1A-015;Kossi;Ami;F;Problème;6.60;10.00
+E1-CE1A-015;Kossi;Ami;F;Sciences et technologies;6.80;10.00
+E1-CE1A-015;Kossi;Ami;F;Sciences humaines;6.90;10.00
+E1-CE1A-049;Kossi;Sylvain;M;Anglais;9.20;10.00
+E1-CE1A-049;Kossi;Sylvain;M;Calcul mental;9.40;10.00
+E1-CE1A-049;Kossi;Sylvain;M;Chant;9.60;10.00
+E1-CE1A-049;Kossi;Sylvain;M;Education artistique et culturelle;5.70;10.00
+E1-CE1A-049;Kossi;Sylvain;M;Education sociale;5.90;10.00
+E1-CE1A-049;Kossi;Sylvain;M;Informatique;6.10;10.00
+E1-CE1A-049;Kossi;Sylvain;M;J'apprends à lire;6.30;10.00
+E1-CE1A-049;Kossi;Sylvain;M;Je sais écrire les mots;6.50;10.00
+E1-CE1A-049;Kossi;Sylvain;M;Je sais utiliser ce que j'ai appris;6.70;10.00
+E1-CE1A-049;Kossi;Sylvain;M;Mathématiques;6.80;10.00
+E1-CE1A-049;Kossi;Sylvain;M;Problème;7.00;10.00
+E1-CE1A-049;Kossi;Sylvain;M;Sciences et technologies;7.20;10.00
+E1-CE1A-049;Kossi;Sylvain;M;Sciences humaines;7.40;10.00
+E1-CE1A-036;Kouma;Viviane;F;Anglais;5.60;10.00
+E1-CE1A-036;Kouma;Viviane;F;Calcul mental;5.80;10.00
+E1-CE1A-036;Kouma;Viviane;F;Chant;6.00;10.00
+E1-CE1A-036;Kouma;Viviane;F;Education artistique et culturelle;6.20;10.00
+E1-CE1A-036;Kouma;Viviane;F;Education sociale;6.40;10.00
+E1-CE1A-036;Kouma;Viviane;F;Informatique;6.50;10.00
+E1-CE1A-036;Kouma;Viviane;F;J'apprends à lire;6.70;10.00
+E1-CE1A-036;Kouma;Viviane;F;Je sais écrire les mots;6.90;10.00
+E1-CE1A-036;Kouma;Viviane;F;Je sais utiliser ce que j'ai appris;7.10;10.00
+E1-CE1A-036;Kouma;Viviane;F;Mathématiques;7.30;10.00
+E1-CE1A-036;Kouma;Viviane;F;Problème;7.50;10.00
+E1-CE1A-036;Kouma;Viviane;F;Sciences et technologies;7.70;10.00
+E1-CE1A-036;Kouma;Viviane;F;Sciences humaines;7.90;10.00
+E1-CE1A-022;Koumado;Ablam;M;Anglais;6.10;10.00
+E1-CE1A-022;Koumado;Ablam;M;Calcul mental;6.30;10.00
+E1-CE1A-022;Koumado;Ablam;M;Chant;6.50;10.00
+E1-CE1A-022;Koumado;Ablam;M;Education artistique et culturelle;6.60;10.00
+E1-CE1A-022;Koumado;Ablam;M;Education sociale;6.80;10.00
+E1-CE1A-022;Koumado;Ablam;M;Informatique;7.00;10.00
+E1-CE1A-022;Koumado;Ablam;M;J'apprends à lire;7.20;10.00
+E1-CE1A-022;Koumado;Ablam;M;Je sais écrire les mots;7.40;10.00
+E1-CE1A-022;Koumado;Ablam;M;Je sais utiliser ce que j'ai appris;7.60;10.00
+E1-CE1A-022;Koumado;Ablam;M;Mathématiques;7.80;10.00
+E1-CE1A-022;Koumado;Ablam;M;Problème;8.00;10.00
+E1-CE1A-022;Koumado;Ablam;M;Sciences et technologies;8.20;10.00
+E1-CE1A-022;Koumado;Ablam;M;Sciences humaines;8.30;10.00
+E1-CE1A-042;Lare;Kossi;M;Anglais;6.50;10.00
+E1-CE1A-042;Lare;Kossi;M;Calcul mental;6.70;10.00
+E1-CE1A-042;Lare;Kossi;M;Chant;6.90;10.00
+E1-CE1A-042;Lare;Kossi;M;Education artistique et culturelle;7.10;10.00
+E1-CE1A-042;Lare;Kossi;M;Education sociale;7.30;10.00
+E1-CE1A-042;Lare;Kossi;M;Informatique;7.50;10.00
+E1-CE1A-042;Lare;Kossi;M;J'apprends à lire;7.70;10.00
+E1-CE1A-042;Lare;Kossi;M;Je sais écrire les mots;7.90;10.00
+E1-CE1A-042;Lare;Kossi;M;Je sais utiliser ce que j'ai appris;8.10;10.00
+E1-CE1A-042;Lare;Kossi;M;Mathématiques;8.20;10.00
+E1-CE1A-042;Lare;Kossi;M;Problème;8.40;10.00
+E1-CE1A-042;Lare;Kossi;M;Sciences et technologies;8.60;10.00
+E1-CE1A-042;Lare;Kossi;M;Sciences humaines;8.80;10.00
+E1-CE1A-041;Lawson;Eyram;M;Anglais;7.00;10.00
+E1-CE1A-041;Lawson;Eyram;M;Calcul mental;7.20;10.00
+E1-CE1A-041;Lawson;Eyram;M;Chant;7.40;10.00
+E1-CE1A-041;Lawson;Eyram;M;Education artistique et culturelle;7.60;10.00
+E1-CE1A-041;Lawson;Eyram;M;Education sociale;7.80;10.00
+E1-CE1A-041;Lawson;Eyram;M;Informatique;8.00;10.00
+E1-CE1A-041;Lawson;Eyram;M;J'apprends à lire;8.20;10.00
+E1-CE1A-041;Lawson;Eyram;M;Je sais écrire les mots;8.30;10.00
+E1-CE1A-041;Lawson;Eyram;M;Je sais utiliser ce que j'ai appris;8.50;10.00
+E1-CE1A-041;Lawson;Eyram;M;Mathématiques;8.70;10.00
+E1-CE1A-041;Lawson;Eyram;M;Problème;8.90;10.00
+E1-CE1A-041;Lawson;Eyram;M;Sciences et technologies;9.10;10.00
+E1-CE1A-041;Lawson;Eyram;M;Sciences humaines;9.30;10.00
+E1-CE1A-034;Nare;Arielle;F;Anglais;7.50;10.00
+E1-CE1A-034;Nare;Arielle;F;Calcul mental;7.70;10.00
+E1-CE1A-034;Nare;Arielle;F;Chant;7.90;10.00
+E1-CE1A-034;Nare;Arielle;F;Education artistique et culturelle;8.10;10.00
+E1-CE1A-034;Nare;Arielle;F;Education sociale;8.20;10.00
+E1-CE1A-034;Nare;Arielle;F;Informatique;8.40;10.00
+E1-CE1A-034;Nare;Arielle;F;J'apprends à lire;8.60;10.00
+E1-CE1A-034;Nare;Arielle;F;Je sais écrire les mots;8.80;10.00
+E1-CE1A-034;Nare;Arielle;F;Je sais utiliser ce que j'ai appris;9.00;10.00
+E1-CE1A-034;Nare;Arielle;F;Mathématiques;9.20;10.00
+E1-CE1A-034;Nare;Arielle;F;Problème;9.40;10.00
+E1-CE1A-034;Nare;Arielle;F;Sciences et technologies;9.60;10.00
+E1-CE1A-034;Nare;Arielle;F;Sciences humaines;5.70;10.00
+E1-CE1A-030;Nare;Sonia;F;Anglais;8.00;10.00
+E1-CE1A-030;Nare;Sonia;F;Calcul mental;8.10;10.00
+E1-CE1A-030;Nare;Sonia;F;Chant;8.30;10.00
+E1-CE1A-030;Nare;Sonia;F;Education artistique et culturelle;8.50;10.00
+E1-CE1A-030;Nare;Sonia;F;Education sociale;8.70;10.00
+E1-CE1A-030;Nare;Sonia;F;Informatique;8.90;10.00
+E1-CE1A-030;Nare;Sonia;F;J'apprends à lire;9.10;10.00
+E1-CE1A-030;Nare;Sonia;F;Je sais écrire les mots;9.30;10.00
+E1-CE1A-030;Nare;Sonia;F;Je sais utiliser ce que j'ai appris;9.50;10.00
+E1-CE1A-030;Nare;Sonia;F;Mathématiques;9.70;10.00
+E1-CE1A-030;Nare;Sonia;F;Problème;5.80;10.00
+E1-CE1A-030;Nare;Sonia;F;Sciences et technologies;5.90;10.00
+E1-CE1A-030;Nare;Sonia;F;Sciences humaines;6.10;10.00
+E1-CE1A-018;Soglo;Khadija;F;Anglais;8.40;10.00
+E1-CE1A-018;Soglo;Khadija;F;Calcul mental;8.60;10.00
+E1-CE1A-018;Soglo;Khadija;F;Chant;8.80;10.00
+E1-CE1A-018;Soglo;Khadija;F;Education artistique et culturelle;9.00;10.00
+E1-CE1A-018;Soglo;Khadija;F;Education sociale;9.20;10.00
+E1-CE1A-018;Soglo;Khadija;F;Informatique;9.40;10.00
+E1-CE1A-018;Soglo;Khadija;F;J'apprends à lire;9.60;10.00
+E1-CE1A-018;Soglo;Khadija;F;Je sais écrire les mots;5.60;10.00
+E1-CE1A-018;Soglo;Khadija;F;Je sais utiliser ce que j'ai appris;5.80;10.00
+E1-CE1A-018;Soglo;Khadija;F;Mathématiques;6.00;10.00
+E1-CE1A-018;Soglo;Khadija;F;Problème;6.20;10.00
+E1-CE1A-018;Soglo;Khadija;F;Sciences et technologies;6.40;10.00
+E1-CE1A-018;Soglo;Khadija;F;Sciences humaines;6.60;10.00
+E1-CE1A-001;Tano;Jean;M;Anglais;8.90;10.00
+E1-CE1A-001;Tano;Jean;M;Calcul mental;9.10;10.00
+E1-CE1A-001;Tano;Jean;M;Chant;9.30;10.00
+E1-CE1A-001;Tano;Jean;M;Education artistique et culturelle;9.50;10.00
+E1-CE1A-001;Tano;Jean;M;Education sociale;9.70;10.00
+E1-CE1A-001;Tano;Jean;M;Informatique;5.70;10.00
+E1-CE1A-001;Tano;Jean;M;J'apprends à lire;5.90;10.00
+E1-CE1A-001;Tano;Jean;M;Je sais écrire les mots;6.10;10.00
+E1-CE1A-001;Tano;Jean;M;Je sais utiliser ce que j'ai appris;6.30;10.00
+E1-CE1A-001;Tano;Jean;M;Mathématiques;6.50;10.00
+E1-CE1A-001;Tano;Jean;M;Problème;6.70;10.00
+E1-CE1A-001;Tano;Jean;M;Sciences et technologies;6.90;10.00
+E1-CE1A-001;Tano;Jean;M;Sciences humaines;7.10;10.00
+E1-CE1A-004;Tidjani;Kossi;M;Anglais;9.40;10.00
+E1-CE1A-004;Tidjani;Kossi;M;Calcul mental;9.50;10.00
+E1-CE1A-004;Tidjani;Kossi;M;Chant;5.60;10.00
+E1-CE1A-004;Tidjani;Kossi;M;Education artistique et culturelle;5.80;10.00
+E1-CE1A-004;Tidjani;Kossi;M;Education sociale;6.00;10.00
+E1-CE1A-004;Tidjani;Kossi;M;Informatique;6.20;10.00
+E1-CE1A-004;Tidjani;Kossi;M;J'apprends à lire;6.40;10.00
+E1-CE1A-004;Tidjani;Kossi;M;Je sais écrire les mots;6.60;10.00
+E1-CE1A-004;Tidjani;Kossi;M;Je sais utiliser ce que j'ai appris;6.80;10.00
+E1-CE1A-004;Tidjani;Kossi;M;Mathématiques;7.00;10.00
+E1-CE1A-004;Tidjani;Kossi;M;Problème;7.20;10.00
+E1-CE1A-004;Tidjani;Kossi;M;Sciences et technologies;7.40;10.00
+E1-CE1A-004;Tidjani;Kossi;M;Sciences humaines;7.50;10.00
+E1-CE1A-040;Tossou;Rachel;F;Anglais;5.70;10.00
+E1-CE1A-040;Tossou;Rachel;F;Calcul mental;5.90;10.00
+E1-CE1A-040;Tossou;Rachel;F;Chant;6.10;10.00
+E1-CE1A-040;Tossou;Rachel;F;Education artistique et culturelle;6.30;10.00
+E1-CE1A-040;Tossou;Rachel;F;Education sociale;6.50;10.00
+E1-CE1A-040;Tossou;Rachel;F;Informatique;6.70;10.00
+E1-CE1A-040;Tossou;Rachel;F;J'apprends à lire;6.90;10.00
+E1-CE1A-040;Tossou;Rachel;F;Je sais écrire les mots;7.10;10.00
+E1-CE1A-040;Tossou;Rachel;F;Je sais utiliser ce que j'ai appris;7.20;10.00
+E1-CE1A-040;Tossou;Rachel;F;Mathématiques;7.40;10.00
+E1-CE1A-040;Tossou;Rachel;F;Problème;7.60;10.00
+E1-CE1A-040;Tossou;Rachel;F;Sciences et technologies;7.80;10.00
+E1-CE1A-040;Tossou;Rachel;F;Sciences humaines;8.00;10.00
+E1-CE1A-038;Tossou;Vanessa;F;Anglais;6.20;10.00
+E1-CE1A-038;Tossou;Vanessa;F;Calcul mental;6.40;10.00
+E1-CE1A-038;Tossou;Vanessa;F;Chant;6.60;10.00
+E1-CE1A-038;Tossou;Vanessa;F;Education artistique et culturelle;6.80;10.00
+E1-CE1A-038;Tossou;Vanessa;F;Education sociale;7.00;10.00
+E1-CE1A-038;Tossou;Vanessa;F;Informatique;7.20;10.00
+E1-CE1A-038;Tossou;Vanessa;F;J'apprends à lire;7.30;10.00
+E1-CE1A-038;Tossou;Vanessa;F;Je sais écrire les mots;7.50;10.00
+E1-CE1A-038;Tossou;Vanessa;F;Je sais utiliser ce que j'ai appris;7.70;10.00
+E1-CE1A-038;Tossou;Vanessa;F;Mathématiques;7.90;10.00
+E1-CE1A-038;Tossou;Vanessa;F;Problème;8.10;10.00
+E1-CE1A-038;Tossou;Vanessa;F;Sciences et technologies;8.30;10.00
+E1-CE1A-038;Tossou;Vanessa;F;Sciences humaines;8.50;10.00
+E1-CE1A-032;Traore;Fabrice;M;Anglais;6.70;10.00
+E1-CE1A-032;Traore;Fabrice;M;Calcul mental;6.90;10.00
+E1-CE1A-032;Traore;Fabrice;M;Chant;7.10;10.00
+E1-CE1A-032;Traore;Fabrice;M;Education artistique et culturelle;7.20;10.00
+E1-CE1A-032;Traore;Fabrice;M;Education sociale;7.40;10.00
+E1-CE1A-032;Traore;Fabrice;M;Informatique;7.60;10.00
+E1-CE1A-032;Traore;Fabrice;M;J'apprends à lire;7.80;10.00
+E1-CE1A-032;Traore;Fabrice;M;Je sais écrire les mots;8.00;10.00
+E1-CE1A-032;Traore;Fabrice;M;Je sais utiliser ce que j'ai appris;8.20;10.00
+E1-CE1A-032;Traore;Fabrice;M;Mathématiques;8.40;10.00
+E1-CE1A-032;Traore;Fabrice;M;Problème;8.60;10.00
+E1-CE1A-032;Traore;Fabrice;M;Sciences et technologies;8.80;10.00
+E1-CE1A-032;Traore;Fabrice;M;Sciences humaines;8.90;10.00
+E1-CE1A-011;Wotogbe;Mensah;M;Anglais;7.10;10.00
+E1-CE1A-011;Wotogbe;Mensah;M;Calcul mental;7.30;10.00
+E1-CE1A-011;Wotogbe;Mensah;M;Chant;7.50;10.00
+E1-CE1A-011;Wotogbe;Mensah;M;Education artistique et culturelle;7.70;10.00
+E1-CE1A-011;Wotogbe;Mensah;M;Education sociale;7.90;10.00
+E1-CE1A-011;Wotogbe;Mensah;M;Informatique;8.10;10.00
+E1-CE1A-011;Wotogbe;Mensah;M;J'apprends à lire;8.30;10.00
+E1-CE1A-011;Wotogbe;Mensah;M;Je sais écrire les mots;8.50;10.00
+E1-CE1A-011;Wotogbe;Mensah;M;Je sais utiliser ce que j'ai appris;8.70;10.00
+E1-CE1A-011;Wotogbe;Mensah;M;Mathématiques;8.80;10.00
+E1-CE1A-011;Wotogbe;Mensah;M;Problème;9.00;10.00
+E1-CE1A-011;Wotogbe;Mensah;M;Sciences et technologies;9.20;10.00
+E1-CE1A-011;Wotogbe;Mensah;M;Sciences humaines;9.40;10.00
+E1-CE1A-024;Yovo;Elom;M;Anglais;7.60;10.00
+E1-CE1A-024;Yovo;Elom;M;Calcul mental;7.80;10.00
+E1-CE1A-024;Yovo;Elom;M;Chant;8.00;10.00
+E1-CE1A-024;Yovo;Elom;M;Education artistique et culturelle;8.20;10.00
+E1-CE1A-024;Yovo;Elom;M;Education sociale;8.40;10.00
+E1-CE1A-024;Yovo;Elom;M;Informatique;8.60;10.00
+E1-CE1A-024;Yovo;Elom;M;J'apprends à lire;8.80;10.00
+E1-CE1A-024;Yovo;Elom;M;Je sais écrire les mots;8.90;10.00
+E1-CE1A-024;Yovo;Elom;M;Je sais utiliser ce que j'ai appris;9.10;10.00
+E1-CE1A-024;Yovo;Elom;M;Mathématiques;9.30;10.00
+E1-CE1A-024;Yovo;Elom;M;Problème;9.50;10.00
+E1-CE1A-024;Yovo;Elom;M;Sciences et technologies;5.60;10.00
+E1-CE1A-024;Yovo;Elom;M;Sciences humaines;5.80;10.00
+E1-CE1A-044;Yovo;Karen;F;Anglais;8.10;10.00
+E1-CE1A-044;Yovo;Karen;F;Calcul mental;8.30;10.00
+E1-CE1A-044;Yovo;Karen;F;Chant;8.50;10.00
+E1-CE1A-044;Yovo;Karen;F;Education artistique et culturelle;8.70;10.00
+E1-CE1A-044;Yovo;Karen;F;Education sociale;8.80;10.00
+E1-CE1A-044;Yovo;Karen;F;Informatique;9.00;10.00
+E1-CE1A-044;Yovo;Karen;F;J'apprends à lire;9.20;10.00
+E1-CE1A-044;Yovo;Karen;F;Je sais écrire les mots;9.40;10.00
+E1-CE1A-044;Yovo;Karen;F;Je sais utiliser ce que j'ai appris;9.60;10.00
+E1-CE1A-044;Yovo;Karen;F;Mathématiques;5.70;10.00
+E1-CE1A-044;Yovo;Karen;F;Problème;5.90;10.00
+E1-CE1A-044;Yovo;Karen;F;Sciences et technologies;6.10;10.00
+E1-CE1A-044;Yovo;Karen;F;Sciences humaines;6.30;10.00
+E1-CE1A-050;Zinsou;Fabrice;M;Anglais;8.60;10.00
+E1-CE1A-050;Zinsou;Fabrice;M;Calcul mental;8.70;10.00
+E1-CE1A-050;Zinsou;Fabrice;M;Chant;8.90;10.00
+E1-CE1A-050;Zinsou;Fabrice;M;Education artistique et culturelle;9.10;10.00
+E1-CE1A-050;Zinsou;Fabrice;M;Education sociale;9.30;10.00
+E1-CE1A-050;Zinsou;Fabrice;M;Informatique;9.50;10.00
+E1-CE1A-050;Zinsou;Fabrice;M;J'apprends à lire;9.70;10.00
+E1-CE1A-050;Zinsou;Fabrice;M;Je sais écrire les mots;5.80;10.00
+E1-CE1A-050;Zinsou;Fabrice;M;Je sais utiliser ce que j'ai appris;6.00;10.00
+E1-CE1A-050;Zinsou;Fabrice;M;Mathématiques;6.20;10.00
+E1-CE1A-050;Zinsou;Fabrice;M;Problème;6.30;10.00
+E1-CE1A-050;Zinsou;Fabrice;M;Sciences et technologies;6.50;10.00
+E1-CE1A-050;Zinsou;Fabrice;M;Sciences humaines;6.70;10.00
+E1-CE1A-005;Zinsou;Zinsou;M;Anglais;9.00;10.00
+E1-CE1A-005;Zinsou;Zinsou;M;Calcul mental;9.20;10.00
+E1-CE1A-005;Zinsou;Zinsou;M;Chant;9.40;10.00
+E1-CE1A-005;Zinsou;Zinsou;M;Education artistique et culturelle;9.60;10.00
+E1-CE1A-005;Zinsou;Zinsou;M;Education sociale;5.70;10.00
+E1-CE1A-005;Zinsou;Zinsou;M;Informatique;5.90;10.00
+E1-CE1A-005;Zinsou;Zinsou;M;J'apprends à lire;6.10;10.00
+E1-CE1A-005;Zinsou;Zinsou;M;Je sais écrire les mots;6.30;10.00
+E1-CE1A-005;Zinsou;Zinsou;M;Je sais utiliser ce que j'ai appris;6.40;10.00
+E1-CE1A-005;Zinsou;Zinsou;M;Mathématiques;6.60;10.00
+E1-CE1A-005;Zinsou;Zinsou;M;Problème;6.80;10.00
+E1-CE1A-005;Zinsou;Zinsou;M;Sciences et technologies;7.00;10.00
+E1-CE1A-005;Zinsou;Zinsou;M;Sciences humaines;7.20;10.00

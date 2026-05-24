@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
 )
 
 from database.connection import get_connection
+from utils.message_boxes import show_error_dialog
 
 
 class TimetableDetailsDialog(QDialog):
@@ -174,6 +175,6 @@ class TimetableDetailsDialog(QDialog):
             self.v_year.setText(school_year_name or "-")
 
         except Exception as e:
-            QMessageBox.critical(self, "Erreur", f"Chargement impossible : {e}")
+            show_error_dialog(self, "Erreur", "Chargement impossible.", e)
         finally:
             conn.close()

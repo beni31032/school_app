@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
 )
 
 from database.connection import get_connection
+from utils.message_boxes import show_error_dialog
 from utils.subject_service import ensure_subject_schema
 from utils.teacher_service import ensure_teacher_schema
 
@@ -38,7 +39,15 @@ class AddTimetableDialog(QDialog):
         self.start_time_input = QTimeEdit()
         self.end_time_input = QTimeEdit()
 
-        self.day_input.addItems(["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"])
+        for day_value, day_label in [
+            (1, "Lundi"),
+            (2, "Mardi"),
+            (3, "Mercredi"),
+            (4, "Jeudi"),
+            (5, "Vendredi"),
+            (6, "Samedi"),
+        ]:
+            self.day_input.addItem(day_label, day_value)
         self.start_time_input.setDisplayFormat("HH:mm")
         self.end_time_input.setDisplayFormat("HH:mm")
         self.start_time_input.setTime(QTime(7, 30))
@@ -202,9 +211,9 @@ class AddTimetableDialog(QDialog):
         class_id = self.class_input.currentData()
         subject_id = self.subject_input.currentData()
         teacher_id = self.teacher_input.currentData()
-        day = self.day_input.currentText()
-        start_time = self.start_time_input.time().toString("HH:mm")
-        end_time = self.end_time_input.time().toString("HH:mm")
+        day = self.day_input.currentData()
+        start_time = self.start_time_input.time().toPyTime()
+        end_time = self.end_time_input.time().toPyTime()
 
         if not all([est_id, school_year_id, class_id, subject_id, teacher_id]):
             QMessageBox.warning(self, "Validation", "Tous les champs sont obligatoires.")
@@ -225,7 +234,7 @@ class AddTimetableDialog(QDialog):
                 SELECT 1
                 FROM timetables
                 WHERE class_id=%s AND school_year_id=%s AND day_of_week=%s
-                  AND NOT (end_time <= %s::time OR start_time >= %s::time)
+                  AND NOT (end_time <= %s OR start_time >= %s)
                 LIMIT 1
                 """,
                 (class_id, school_year_id, day, start_time, end_time),
@@ -239,7 +248,7 @@ class AddTimetableDialog(QDialog):
                 SELECT 1
                 FROM timetables
                 WHERE teacher_id=%s AND school_year_id=%s AND day_of_week=%s
-                  AND NOT (end_time <= %s::time OR start_time >= %s::time)
+                  AND NOT (end_time <= %s OR start_time >= %s)
                 LIMIT 1
                 """,
                 (teacher_id, school_year_id, day, start_time, end_time),
@@ -261,6 +270,6 @@ class AddTimetableDialog(QDialog):
             self.accept()
         except Exception as e:
             conn.rollback()
-            QMessageBox.critical(self, "Erreur", f"Enregistrement impossible : {e}")
+            show_error_dialog(self, "Erreur", "Enregistrement impossible.", e)
         finally:
             conn.close()

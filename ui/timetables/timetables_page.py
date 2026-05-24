@@ -25,6 +25,7 @@ from database.connection import get_connection
 from ui.timetables.add_timetable_dialog import AddTimetableDialog
 from ui.timetables.edit_timetable_dialog import EditTimetableDialog
 from ui.timetables.timetable_details_dialog import TimetableDetailsDialog
+from utils.message_boxes import show_error_dialog
 from utils.qt_printing import preview_pdf_file, print_pdf_file
 from utils.subject_service import ensure_subject_schema
 from utils.table_style import setup_table
@@ -316,7 +317,7 @@ class TimetablesPage(QWidget):
                 FROM timetables t
                 JOIN classes c ON c.id = t.class_id
                 JOIN subjects s ON s.id = t.subject_id
-                JOIN teachers tr ON tr.id = t.teacher_id
+                LEFT JOIN teachers tr ON tr.id = t.teacher_id
                 JOIN school_years sy ON sy.id = t.school_year_id
                 JOIN establishments e ON e.id = t.establishment_id
                 {where_sql}
@@ -348,7 +349,7 @@ class TimetablesPage(QWidget):
                 self.clear_details()
             self.load_weekly_schedule()
         except Exception as e:
-            QMessageBox.critical(self, "Erreur", f"Chargement impossible : {e}")
+            show_error_dialog(self, "Erreur", "Chargement impossible.", e)
         finally:
             conn.close()
 
@@ -502,7 +503,7 @@ class TimetablesPage(QWidget):
             self.load_rows()
         except Exception as e:
             conn.rollback()
-            QMessageBox.critical(self, "Erreur", f"Suppression impossible : {e}")
+            show_error_dialog(self, "Erreur", "Suppression impossible.", e)
         finally:
             conn.close()
 
@@ -750,11 +751,11 @@ class TimetablesPage(QWidget):
             filepath = self._generate_weekly_schedule_pdf()
             preview_pdf_file(self, filepath)
         except Exception as e:
-            QMessageBox.critical(self, "Erreur", f"Aperçu impossible : {e}")
+            show_error_dialog(self, "Erreur", "Aperçu impossible.", e)
 
     def print_weekly_schedule(self):
         try:
             filepath = self._generate_weekly_schedule_pdf()
             print_pdf_file(self, filepath, "Emploi du temps envoyé à l'impression.")
         except Exception as e:
-            QMessageBox.critical(self, "Erreur", f"Impression impossible : {e}")
+            show_error_dialog(self, "Erreur", "Impression impossible.", e)

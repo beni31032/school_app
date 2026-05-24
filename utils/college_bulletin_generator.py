@@ -58,8 +58,8 @@ def _draw_page_header(c: canvas.Canvas, width: float, height: float, school_name
 
     c.setFillColor(colors.black)
     c.setFont("Helvetica-Bold", 8.6 if compact else 9)
-    c.drawString(left, top - 10, "MINISTERE DES ENSEIGNEMENTS")
-    c.drawString(left, top - 21, "PRIMAIRE ET SECONDAIRE")
+    c.drawString(left, top - 10, "MINISTERE DE")
+    c.drawString(left, top - 21, "L'EDUCATION NATIONALE")
     c.drawRightString(right - 10, top - 10, "REPUBLIQUE TOGOLAISE")
     c.setFont("Helvetica", 7 if compact else 8)
     c.drawRightString(right - 10, top - 21, "Travail - Liberté - Patrie")
