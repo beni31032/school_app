@@ -485,6 +485,7 @@ def get_lycee_bulletin_data(student_id: int, term_id: int) -> dict:
                 s.first_name,
                 s.last_name,
                 s.gender,
+                s.photo_path,
                 c.id AS class_id,
                 c.name AS class_name,
                 t.name AS term_name,
@@ -514,6 +515,7 @@ def get_lycee_bulletin_data(student_id: int, term_id: int) -> dict:
             first_name,
             last_name,
             gender,
+            photo_path,
             class_id,
             class_name,
             term_name,
@@ -639,8 +641,11 @@ def get_lycee_bulletin_data(student_id: int, term_id: int) -> dict:
 
         term_ids = get_school_year_term_ids(school_year_id)
         term_averages = [get_term_average_for_student(class_id, student_id, tid) for tid in term_ids[:3]]
+        term_ranks = [get_general_rank(class_id, student_id, tid, school_year_id)[0] for tid in term_ids[:3]]
         while len(term_averages) < 3:
             term_averages.append(0.0)
+        while len(term_ranks) < 3:
+            term_ranks.append(0)
 
         annual_average = get_annual_average(class_id, student_id, school_year_id)
         annual_rank = get_annual_rank(class_id, student_id, school_year_id)
@@ -657,6 +662,7 @@ def get_lycee_bulletin_data(student_id: int, term_id: int) -> dict:
             "first_name": first_name,
             "last_name": last_name,
             "gender": gender,
+            "photo_path": photo_path,
             "class_id": class_id,
             "class_name": class_name,
             "term_name": term_name,
@@ -674,8 +680,11 @@ def get_lycee_bulletin_data(student_id: int, term_id: int) -> dict:
             "general_average": general_average,
             "general_rank": general_rank,
             "avg_trim_1": round(term_averages[0], 2),
+            "rank_trim_1": term_ranks[0],
             "avg_trim_2": round(term_averages[1], 2),
+            "rank_trim_2": term_ranks[1],
             "avg_trim_3": round(term_averages[2], 2),
+            "rank_trim_3": term_ranks[2],
             "annual_average": annual_average,
             "annual_rank": annual_rank,
             "class_highest_average": class_stats["highest_average"],
