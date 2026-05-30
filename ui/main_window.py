@@ -1,5 +1,7 @@
 # main_window.py
 
+from pathlib import Path
+import traceback
 
 from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtWidgets import (
@@ -35,6 +37,7 @@ from ui.bulletins.primary_bulletins_page import PrimaryBulletinsPage
 from ui.bulletins.college_bulletins_page import CollegeBulletinsPage
 from ui.bulletins.lycee_bulletins_page import LyceeBulletinsPage
 from ui.settings.settings_page import SettingsPage
+from utils.message_boxes import show_error_dialog
 
 
 class MainWindow(QMainWindow):
@@ -578,6 +581,16 @@ class MainWindow(QMainWindow):
     def _existing_page(self, key):
         return self._pages.get(key)
 
+    def _log_page_error(self, page_key: str, error: Exception) -> Path:
+        log_path = Path.cwd() / "schoolapp_error.log"
+        trace = traceback.format_exc()
+        with log_path.open("a", encoding="utf-8") as log_file:
+            log_file.write(f"\n=== Erreur module: {page_key} ===\n")
+            log_file.write(trace)
+            if not trace.endswith("\n"):
+                log_file.write("\n")
+        return log_path
+
     def _finish_lazy_switch(self):
         if not self._pending_page_key or not self._pending_button:
             QApplication.restoreOverrideCursor()
@@ -591,6 +604,15 @@ class MainWindow(QMainWindow):
         try:
             page = self._get_page(key)
             self.stack.setCurrentWidget(page)
+        except Exception as error:
+            log_path = self._log_page_error(key, error)
+            self.stack.setCurrentWidget(self._get_page("home"))
+            show_error_dialog(
+                self,
+                "Erreur",
+                f"Impossible d'ouvrir le module : {button.text().strip()}",
+                f"{error}\n\nDétails enregistrés dans : {log_path}",
+            )
         finally:
             self.set_active_button(button)
             QApplication.restoreOverrideCursor()
