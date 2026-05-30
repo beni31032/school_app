@@ -1,9 +1,10 @@
 # main_window.py
 
 
+from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout,
-    QVBoxLayout, QPushButton, QLabel, QStackedWidget, QScrollArea, QFrame
+    QVBoxLayout, QPushButton, QLabel, QStackedWidget, QScrollArea, QFrame, QApplication
 )
 
 from ui.dashboard.dashboard_page import DashboardPage
@@ -45,6 +46,8 @@ class MainWindow(QMainWindow):
         self.section_toggles = {}
         self.section_contents = {}
         self.button_sections = {}
+        self._pending_page_key = None
+        self._pending_button = None
         self._pages = {}
         self._page_attrs = {
             "home": "page_home",
@@ -227,6 +230,36 @@ class MainWindow(QMainWindow):
 
             QStackedWidget {
                 background-color: #f1f5f9;
+            }
+
+            QComboBox {
+                background-color: #ffffff;
+                color: #111827;
+                border: 1px solid #cbd5e1;
+                border-radius: 6px;
+                padding: 6px 10px;
+                min-height: 28px;
+                selection-background-color: #dbeafe;
+                selection-color: #111827;
+            }
+
+            QComboBox:hover {
+                border: 1px solid #93c5fd;
+            }
+
+            QComboBox::drop-down {
+                border: none;
+                width: 24px;
+                background: transparent;
+            }
+
+            QComboBox QAbstractItemView {
+                background-color: #ffffff;
+                color: #111827;
+                border: 1px solid #cbd5e1;
+                selection-background-color: #2563eb;
+                selection-color: #ffffff;
+                outline: 0;
             }
             
             QTableWidget {
@@ -416,6 +449,16 @@ class MainWindow(QMainWindow):
         # PAGES
         # =========================
         self.stack = QStackedWidget()
+        self.loading_page = QWidget()
+        loading_layout = QVBoxLayout()
+        loading_layout.setContentsMargins(20, 20, 20, 20)
+        self.loading_label = QLabel("Chargement du module...")
+        self.loading_label.setStyleSheet("color: #111827; font-size: 16px; font-weight: 700;")
+        loading_layout.addStretch()
+        loading_layout.addWidget(self.loading_label)
+        loading_layout.addStretch()
+        self.loading_page.setLayout(loading_layout)
+        self.stack.addWidget(self.loading_page)
         self._get_page("home")
 
         main_layout.addWidget(self.menu_widget)
@@ -534,6 +577,23 @@ class MainWindow(QMainWindow):
 
     def _existing_page(self, key):
         return self._pages.get(key)
+
+    def _finish_lazy_switch(self):
+        if not self._pending_page_key or not self._pending_button:
+            QApplication.restoreOverrideCursor()
+            return
+
+        key = self._pending_page_key
+        button = self._pending_button
+        self._pending_page_key = None
+        self._pending_button = None
+
+        try:
+            page = self._get_page(key)
+            self.stack.setCurrentWidget(page)
+        finally:
+            self.set_active_button(button)
+            QApplication.restoreOverrideCursor()
 
     def refresh_school_year_dependent_pages(self):
         # Rebuild year-based filters and cached "current school year" values
@@ -684,9 +744,23 @@ class MainWindow(QMainWindow):
         section = self.button_sections.get(button)
         if section:
             self.expand_only_section(section)
-        self.set_active_button(button)
         if isinstance(page, str):
-            page = self._get_page(page)
+            existing_page = self._existing_page(page)
+            if existing_page is not None:
+                self.set_active_button(button)
+                self.stack.setCurrentWidget(existing_page)
+                return
+
+            self._pending_page_key = page
+            self._pending_button = button
+            self.loading_label.setText(f"Chargement de {button.text().replace('⚙  ', '').strip()}...")
+            self.set_active_button(button)
+            self.stack.setCurrentWidget(self.loading_page)
+            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+            QTimer.singleShot(0, self._finish_lazy_switch)
+            return
+
+        self.set_active_button(button)
         self.stack.setCurrentWidget(page)
         
     def create_submenu_button(self, text):
