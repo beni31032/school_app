@@ -45,6 +45,67 @@ class MainWindow(QMainWindow):
         self.section_toggles = {}
         self.section_contents = {}
         self.button_sections = {}
+        self._pages = {}
+        self._page_attrs = {
+            "home": "page_home",
+            "students": "page_students",
+            "teachers": "page_teachers",
+            "staff": "page_staff",
+            "classes": "page_classes",
+            "subjects": "page_subjects",
+            "class_subjects": "page_class_subjects",
+            "teacher_assignments": "page_teacher_assignments",
+            "timetables": "page_timetables",
+            "lists": "page_lists",
+            "statistics": "page_statistics",
+            "grades": "page_grades",
+            "fees": "page_fees",
+            "cycle_fees": "page_cycle_fees",
+            "class_fees": "page_class_fees",
+            "payments": "page_payments",
+            "student_finance": "page_student_finance",
+            "discounts": "page_discounts",
+            "expenses": "page_expenses",
+            "salaries": "page_salaries",
+            "financial_reports": "page_financial_reports",
+            "settings": "page_settings",
+            "primary_grades": "page_primary_grades",
+            "college_grades": "page_college_grades",
+            "lycee_grades": "page_lycee_grades",
+            "primary_bulletins": "page_primary_bulletins",
+            "college_bulletins": "page_college_bulletins",
+            "lycee_bulletins": "page_lycee_bulletins",
+        }
+        self._page_factories = {
+            "home": lambda: DashboardPage(current_user=self.current_user),
+            "students": lambda: StudentsPage(current_user=self.current_user),
+            "teachers": lambda: TeachersPage(current_user=self.current_user),
+            "staff": lambda: StaffPage(current_user=self.current_user),
+            "classes": lambda: ClassesPage(current_user=self.current_user),
+            "subjects": lambda: SubjectsPage(current_user=self.current_user),
+            "class_subjects": lambda: ClassSubjectsPage(current_user=self.current_user),
+            "teacher_assignments": lambda: TeacherAssignmentsPage(current_user=self.current_user),
+            "timetables": lambda: TimetablesPage(current_user=self.current_user),
+            "lists": lambda: ListsPage(current_user=self.current_user),
+            "statistics": lambda: StatisticsPage(current_user=self.current_user),
+            "grades": lambda: GradesPage(current_user=self.current_user),
+            "fees": lambda: FeesPage(current_user=self.current_user),
+            "cycle_fees": lambda: CycleFeeConfigsPage(current_user=self.current_user),
+            "class_fees": lambda: ClassFeesPage(current_user=self.current_user),
+            "payments": lambda: PaymentsPage(current_user=self.current_user),
+            "student_finance": lambda: StudentFinancePage(current_user=self.current_user),
+            "discounts": lambda: DiscountsPage(self.current_user),
+            "expenses": lambda: ExpensesPage(self.current_user),
+            "salaries": lambda: SalariesPage(self.current_user),
+            "financial_reports": lambda: FinancialReportsPage(self.current_user),
+            "settings": lambda: SettingsPage(self.current_user),
+            "primary_grades": lambda: PrimaryGradesPage(current_user=self.current_user),
+            "college_grades": lambda: CollegeGradesPage(current_user=self.current_user),
+            "lycee_grades": lambda: LyceeGradesPage(current_user=self.current_user),
+            "primary_bulletins": lambda: PrimaryBulletinsPage(current_user=self.current_user),
+            "college_bulletins": lambda: CollegeBulletinsPage(current_user=self.current_user),
+            "lycee_bulletins": lambda: LyceeBulletinsPage(current_user=self.current_user),
+        }
         self.section_colors = {
             "Vue générale": "#93c5fd",
             "Administration": "#86efac",
@@ -355,67 +416,7 @@ class MainWindow(QMainWindow):
         # PAGES
         # =========================
         self.stack = QStackedWidget()
-
-        self.page_home = DashboardPage(current_user=self.current_user)
-        self.page_students = StudentsPage(current_user=self.current_user)
-        self.page_teachers = TeachersPage(current_user=self.current_user)
-        self.page_staff = StaffPage(current_user=self.current_user)
-        self.page_classes = ClassesPage(current_user=self.current_user)
-        self.page_subjects = SubjectsPage(current_user=self.current_user)
-        self.page_class_subjects = ClassSubjectsPage(current_user=self.current_user)
-        self.page_teacher_assignments = TeacherAssignmentsPage(current_user=self.current_user)
-        self.page_timetables = TimetablesPage(current_user=self.current_user)
-        self.page_lists = ListsPage(current_user=self.current_user)
-        self.page_statistics = StatisticsPage(current_user=self.current_user)
-        self.page_grades = GradesPage(current_user=self.current_user)
-        self.page_fees = FeesPage(current_user=self.current_user)
-        self.page_cycle_fees = CycleFeeConfigsPage(current_user=self.current_user)
-        self.page_class_fees = ClassFeesPage(current_user=self.current_user)
-        self.page_payments = PaymentsPage(current_user=self.current_user)
-        self.page_student_finance = StudentFinancePage(current_user=self.current_user)
-        self.page_discounts = DiscountsPage(self.current_user)
-        self.page_expenses = ExpensesPage(self.current_user)
-        self.page_salaries = SalariesPage(self.current_user)
-        self.page_financial_reports = FinancialReportsPage(self.current_user)
-        self.page_settings = SettingsPage(self.current_user)
-        
-        #Grades
-        self.page_primary_grades = PrimaryGradesPage(current_user=self.current_user)
-        self.page_college_grades = CollegeGradesPage(current_user=self.current_user)
-        self.page_lycee_grades = LyceeGradesPage(current_user=self.current_user)
-        #Bulletins
-        self.page_primary_bulletins = PrimaryBulletinsPage(current_user=self.current_user)
-        self.page_college_bulletins = CollegeBulletinsPage(current_user=self.current_user)
-        self.page_lycee_bulletins = LyceeBulletinsPage(current_user=self.current_user)
-
-        self.stack.addWidget(self.page_home)
-        self.stack.addWidget(self.page_students)
-        self.stack.addWidget(self.page_teachers)
-        self.stack.addWidget(self.page_staff)
-        self.stack.addWidget(self.page_classes)
-        self.stack.addWidget(self.page_subjects)
-        self.stack.addWidget(self.page_class_subjects)
-        self.stack.addWidget(self.page_teacher_assignments)
-        self.stack.addWidget(self.page_timetables)
-        self.stack.addWidget(self.page_lists)
-        self.stack.addWidget(self.page_statistics)
-        self.stack.addWidget(self.page_fees)
-        self.stack.addWidget(self.page_cycle_fees)
-        self.stack.addWidget(self.page_class_fees)
-        self.stack.addWidget(self.page_discounts)
-        self.stack.addWidget(self.page_expenses)
-        self.stack.addWidget(self.page_salaries)
-        self.stack.addWidget(self.page_payments)
-        self.stack.addWidget(self.page_student_finance)
-        self.stack.addWidget(self.page_grades)
-        self.stack.addWidget(self.page_primary_bulletins)
-        self.stack.addWidget(self.page_college_bulletins)
-        self.stack.addWidget(self.page_lycee_bulletins)
-        self.stack.addWidget(self.page_financial_reports)
-        self.stack.addWidget(self.page_primary_grades)
-        self.stack.addWidget(self.page_college_grades)
-        self.stack.addWidget(self.page_lycee_grades)
-        self.stack.addWidget(self.page_settings)
+        self._get_page("home")
 
         main_layout.addWidget(self.menu_widget)
         main_layout.addWidget(self.stack)
@@ -426,141 +427,196 @@ class MainWindow(QMainWindow):
         # CONNECTIONS
         # =========================
         self.dashboard_btn.clicked.connect(
-            lambda: self.switch_page(self.dashboard_btn, self.page_home)
+            lambda: self.switch_page(self.dashboard_btn, "home")
         )
         self.students_btn.clicked.connect(
-            lambda: self.switch_page(self.students_btn, self.page_students)
+            lambda: self.switch_page(self.students_btn, "students")
         )
         self.teachers_btn.clicked.connect(
-            lambda: self.switch_page(self.teachers_btn, self.page_teachers)
+            lambda: self.switch_page(self.teachers_btn, "teachers")
         )
         self.staff_btn.clicked.connect(
-            lambda: self.switch_page(self.staff_btn, self.page_staff)
+            lambda: self.switch_page(self.staff_btn, "staff")
         )
         self.classes_btn.clicked.connect(
-            lambda: self.switch_page(self.classes_btn, self.page_classes)
+            lambda: self.switch_page(self.classes_btn, "classes")
         )
         self.subjects_btn.clicked.connect(
-            lambda: self.switch_page(self.subjects_btn, self.page_subjects)
+            lambda: self.switch_page(self.subjects_btn, "subjects")
         )
         self.class_subjects_btn.clicked.connect(
-            lambda: self.switch_page(self.class_subjects_btn, self.page_class_subjects)
+            lambda: self.switch_page(self.class_subjects_btn, "class_subjects")
         )
         self.teacher_assignments_btn.clicked.connect(
-            lambda: self.switch_page(self.teacher_assignments_btn, self.page_teacher_assignments)
+            lambda: self.switch_page(self.teacher_assignments_btn, "teacher_assignments")
         )
         self.timetables_btn.clicked.connect(
-            lambda: self.switch_page(self.timetables_btn, self.page_timetables)
+            lambda: self.switch_page(self.timetables_btn, "timetables")
         )
         self.lists_btn.clicked.connect(
-            lambda: self.switch_page(self.lists_btn, self.page_lists)
+            lambda: self.switch_page(self.lists_btn, "lists")
         )
         self.statistics_btn.clicked.connect(
-            lambda: self.switch_page(self.statistics_btn, self.page_statistics)
+            lambda: self.switch_page(self.statistics_btn, "statistics")
         )
         self.fees_btn.clicked.connect(
-            lambda: self.switch_page(self.fees_btn, self.page_fees)
+            lambda: self.switch_page(self.fees_btn, "fees")
         )
         self.cycle_fees_btn.clicked.connect(
-            lambda: self.switch_page(self.cycle_fees_btn, self.page_cycle_fees)
+            lambda: self.switch_page(self.cycle_fees_btn, "cycle_fees")
         )
         self.class_fees_btn.clicked.connect(
-            lambda: self.switch_page(self.class_fees_btn, self.page_class_fees)
+            lambda: self.switch_page(self.class_fees_btn, "class_fees")
         )
         self.discounts_btn.clicked.connect(
-            lambda: self.switch_page(self.discounts_btn, self.page_discounts)
+            lambda: self.switch_page(self.discounts_btn, "discounts")
         )
         self.expenses_btn.clicked.connect(
-            lambda: self.switch_page(self.expenses_btn, self.page_expenses)
+            lambda: self.switch_page(self.expenses_btn, "expenses")
         )
         self.salaries_btn.clicked.connect(
-            lambda: self.switch_page(self.salaries_btn, self.page_salaries)
+            lambda: self.switch_page(self.salaries_btn, "salaries")
         )
         self.payments_btn.clicked.connect(
-            lambda: self.switch_page(self.payments_btn, self.page_payments)
+            lambda: self.switch_page(self.payments_btn, "payments")
         )
         self.finance_btn.clicked.connect(
-            lambda: self.switch_page(self.finance_btn, self.page_student_finance)
+            lambda: self.switch_page(self.finance_btn, "student_finance")
         )
         self.grades_btn.clicked.connect(
             self.toggle_grades_submenu
         )
         self.financial_reports_btn.clicked.connect(
-            lambda: self.switch_page(self.financial_reports_btn, self.page_financial_reports)
+            lambda: self.switch_page(self.financial_reports_btn, "financial_reports")
         )
         self.primary_grades_btn.clicked.connect(
-            lambda: self.switch_page(self.primary_grades_btn, self.page_primary_grades)
+            lambda: self.switch_page(self.primary_grades_btn, "primary_grades")
         )
         self.college_grades_btn.clicked.connect(
-            lambda: self.switch_page(self.college_grades_btn, self.page_college_grades)
+            lambda: self.switch_page(self.college_grades_btn, "college_grades")
         )
         self.lycee_grades_btn.clicked.connect(
-            lambda: self.switch_page(self.lycee_grades_btn, self.page_lycee_grades)
+            lambda: self.switch_page(self.lycee_grades_btn, "lycee_grades")
         )
         self.bulletins_btn.clicked.connect(
             self.toggle_bulletins_submenu
         )
         self.primary_bulletins_btn.clicked.connect(
-            lambda: self.switch_page(self.primary_bulletins_btn, self.page_primary_bulletins)
+            lambda: self.switch_page(self.primary_bulletins_btn, "primary_bulletins")
         )
         self.college_bulletins_btn.clicked.connect(
-            lambda: self.switch_page(self.college_bulletins_btn, self.page_college_bulletins)
+            lambda: self.switch_page(self.college_bulletins_btn, "college_bulletins")
         )
         self.lycee_bulletins_btn.clicked.connect(
-            lambda: self.switch_page(self.lycee_bulletins_btn, self.page_lycee_bulletins)
+            lambda: self.switch_page(self.lycee_bulletins_btn, "lycee_bulletins")
         )
         self.settings_btn.clicked.connect(
-            lambda: self.switch_page(self.settings_btn, self.page_settings)
+            lambda: self.switch_page(self.settings_btn, "settings")
         )
-        self.page_settings.school_years_updated.connect(self.refresh_school_year_dependent_pages)
         
         # Page par défaut
-        self.switch_page(self.dashboard_btn, self.page_home)
+        self.switch_page(self.dashboard_btn, "home")
+
+    def _get_page(self, key):
+        if key in self._pages:
+            return self._pages[key]
+
+        factory = self._page_factories[key]
+        page = factory()
+        self._pages[key] = page
+        setattr(self, self._page_attrs[key], page)
+        self.stack.addWidget(page)
+
+        if key == "settings":
+            page.school_years_updated.connect(self.refresh_school_year_dependent_pages)
+
+        return page
+
+    def _existing_page(self, key):
+        return self._pages.get(key)
 
     def refresh_school_year_dependent_pages(self):
         # Rebuild year-based filters and cached "current school year" values
         # so the app reflects a newly created school year immediately.
-        self.page_home.load_data()
-        self.page_classes.load_classes()
-        self.page_students.load_school_year_filter()
-        self.page_students.on_school_year_changed()
-        self.page_teacher_assignments.load_school_year_filter()
-        self.page_teacher_assignments.load_class_filter()
-        self.page_teacher_assignments.load_data()
-        self.page_timetables.load_filters()
-        self.page_timetables.load_rows()
-        self.page_lists.load_school_years()
-        self.page_lists.load_terms()
-        self.page_lists.load_classes()
-        self.page_lists.load_subjects()
-        self.page_lists.load_data()
-        self.page_statistics.load_filters()
-        self.page_statistics.load_statistics()
-        self.page_grades.load_current_school_year()
-        self.page_grades.load_terms()
-        self.page_grades.load_classes()
-        self.page_cycle_fees.load_school_year_filter()
-        self.page_cycle_fees.load_data()
-        self.page_class_fees.load_school_year_filter()
-        self.page_class_fees.load_data()
-        self.page_payments.load_payments()
-        self.page_student_finance.load_current_school_year()
-        self.page_student_finance.load_classes()
-        self.page_student_finance.load_students()
-        self.page_discounts.load_school_years()
-        self.page_discounts.load_discounts()
-        self.page_primary_grades.load_classes()
-        self.page_primary_grades.load_terms()
-        self.page_college_grades.load_classes()
-        self.page_college_grades.load_terms()
-        self.page_lycee_grades.load_classes()
-        self.page_lycee_grades.load_terms()
-        self.page_primary_bulletins.load_classes()
-        self.page_primary_bulletins.load_terms()
-        self.page_college_bulletins.load_classes()
-        self.page_college_bulletins.load_terms()
-        self.page_lycee_bulletins.load_classes()
-        self.page_lycee_bulletins.load_terms()
+        page = self._existing_page("home")
+        if page:
+            page.load_data()
+        page = self._existing_page("classes")
+        if page:
+            page.load_classes()
+        page = self._existing_page("students")
+        if page:
+            page.load_school_year_filter()
+            page.on_school_year_changed()
+        page = self._existing_page("teacher_assignments")
+        if page:
+            page.load_school_year_filter()
+            page.load_class_filter()
+            page.load_data()
+        page = self._existing_page("timetables")
+        if page:
+            page.load_filters()
+            page.load_rows()
+        page = self._existing_page("lists")
+        if page:
+            page.load_school_years()
+            page.load_terms()
+            page.load_classes()
+            page.load_subjects()
+            page.load_data()
+        page = self._existing_page("statistics")
+        if page:
+            page.load_filters()
+            page.load_statistics()
+        page = self._existing_page("grades")
+        if page:
+            page.load_current_school_year()
+            page.load_terms()
+            page.load_classes()
+        page = self._existing_page("cycle_fees")
+        if page:
+            page.load_school_year_filter()
+            page.load_data()
+        page = self._existing_page("class_fees")
+        if page:
+            page.load_school_year_filter()
+            page.load_data()
+        page = self._existing_page("payments")
+        if page:
+            page.load_payments()
+        page = self._existing_page("student_finance")
+        if page:
+            page.load_current_school_year()
+            page.load_classes()
+            page.load_students()
+        page = self._existing_page("discounts")
+        if page:
+            page.load_school_years()
+            page.load_discounts()
+        page = self._existing_page("primary_grades")
+        if page:
+            page.load_classes()
+            page.load_terms()
+        page = self._existing_page("college_grades")
+        if page:
+            page.load_classes()
+            page.load_terms()
+        page = self._existing_page("lycee_grades")
+        if page:
+            page.load_classes()
+            page.load_terms()
+        page = self._existing_page("primary_bulletins")
+        if page:
+            page.load_classes()
+            page.load_terms()
+        page = self._existing_page("college_bulletins")
+        if page:
+            page.load_classes()
+            page.load_terms()
+        page = self._existing_page("lycee_bulletins")
+        if page:
+            page.load_classes()
+            page.load_terms()
 
     def create_menu_button(self, text, icon):
         btn = QPushButton(f"{icon}  {text}")
@@ -629,6 +685,8 @@ class MainWindow(QMainWindow):
         if section:
             self.expand_only_section(section)
         self.set_active_button(button)
+        if isinstance(page, str):
+            page = self._get_page(page)
         self.stack.setCurrentWidget(page)
         
     def create_submenu_button(self, text):

@@ -1,0 +1,6 @@
+PyQt6==6.10.0
+psycopg2-binary==2.9.11
+reportlab==4.4.0
+Pillow==12.0.0
+pypdf==6.1.0
+bcrypt==5.0.0
