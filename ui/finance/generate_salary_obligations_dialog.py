@@ -1,4 +1,3 @@
-from PyQt6.QtCore import QDate
 from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -12,13 +11,7 @@ from PyQt6.QtWidgets import (
 )
 
 from database.connection import get_connection
-from utils.salary_service import ensure_salary_table
-
-
-MONTHS = [
-    "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
-    "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
-]
+from utils.salary_service import ensure_salary_table, get_school_year_months
 
 
 class GenerateSalaryObligationsDialog(QDialog):
@@ -29,51 +22,27 @@ class GenerateSalaryObligationsDialog(QDialog):
 
         ensure_salary_table()
 
-        self.setWindowTitle("Générer obligations de salaires")
-        self.setFixedWidth(600)
+        self.setWindowTitle("Générer les salaires enseignants sur l'année scolaire")
+        self.setFixedWidth(520)
 
         layout = QVBoxLayout()
         form = QFormLayout()
 
         self.establishment_input = QComboBox()
         self.teacher_input = QComboBox()
-        self.month_input = QComboBox()
-        self.year_input = QComboBox()
-        self.mode_input = QComboBox()
-
-        self.amount_unique_input = QDoubleSpinBox()
-        self.amount_unique_input.setRange(0, 999999999)
-        self.amount_unique_input.setDecimals(2)
-
-        self.amount_maternelle_input = QDoubleSpinBox(); self.amount_maternelle_input.setRange(0, 999999999); self.amount_maternelle_input.setDecimals(2)
-        self.amount_primaire_input = QDoubleSpinBox(); self.amount_primaire_input.setRange(0, 999999999); self.amount_primaire_input.setDecimals(2)
-        self.amount_college_input = QDoubleSpinBox(); self.amount_college_input.setRange(0, 999999999); self.amount_college_input.setDecimals(2)
-        self.amount_lycee_input = QDoubleSpinBox(); self.amount_lycee_input.setRange(0, 999999999); self.amount_lycee_input.setDecimals(2)
+        self.school_year_input = QComboBox()
+        self.amount_input = QDoubleSpinBox()
+        self.amount_input.setRange(0, 999999999)
+        self.amount_input.setDecimals(2)
 
         self.notes_input = QTextEdit()
         self.notes_input.setPlaceholderText("Notes optionnelles")
         self.notes_input.setFixedHeight(80)
 
-        today = QDate.currentDate()
-        for idx, label in enumerate(MONTHS, start=1):
-            self.month_input.addItem(label, idx)
-        self.month_input.setCurrentIndex(today.month() - 1)
-        for y in range(today.year() - 1, today.year() + 4):
-            self.year_input.addItem(str(y), y)
-        self.year_input.setCurrentText(str(today.year()))
-        self.mode_input.addItem("Enseignants: montant unique", "UNIQUE")
-        self.mode_input.addItem("Enseignants: par niveau", "BY_LEVEL")
-
         form.addRow("Établissement :", self.establishment_input)
         form.addRow("Enseignant :", self.teacher_input)
-        form.addRow("Mode enseignants :", self.mode_input)
-        form.addRow("Mois :", self.month_input)
-        form.addRow("Année :", self.year_input)
-        form.addRow("Montant enseignants (unique/fallback) :", self.amount_unique_input)
-        form.addRow("Montant enseignants Maternelle :", self.amount_maternelle_input)
-        form.addRow("Montant enseignants Primaire :", self.amount_primaire_input)
-        form.addRow("Montant enseignants Collège :", self.amount_college_input)
-        form.addRow("Montant enseignants Lycée :", self.amount_lycee_input)
+        form.addRow("Année scolaire :", self.school_year_input)
+        form.addRow("Salaire mensuel :", self.amount_input)
         form.addRow("Notes :", self.notes_input)
 
         self.generate_btn = QPushButton("Générer")
@@ -97,6 +66,14 @@ class GenerateSalaryObligationsDialog(QDialog):
                 border-radius: 6px;
                 padding: 6px 8px;
             }
+            QComboBox QAbstractItemView {
+                background-color: white;
+                color: #111827;
+                border: 1px solid #cbd5e1;
+                selection-background-color: #2563eb;
+                selection-color: white;
+                outline: none;
+            }
             QPushButton {
                 min-height: 34px;
                 border-radius: 8px;
@@ -117,14 +94,12 @@ class GenerateSalaryObligationsDialog(QDialog):
             """
         )
 
-        self.mode_input.currentIndexChanged.connect(self.update_amount_mode)
-
         self.generate_btn.clicked.connect(self.generate_obligations)
         self.cancel_btn.clicked.connect(self.reject)
         self.establishment_input.currentIndexChanged.connect(self.load_teachers)
 
         self.load_establishments()
-        self.update_amount_mode()
+        self.load_school_years()
 
     def load_establishments(self):
         conn = get_connection()
@@ -161,12 +136,12 @@ class GenerateSalaryObligationsDialog(QDialog):
         try:
             cur = conn.cursor()
             self.teacher_input.clear()
-            self.teacher_input.addItem("Tous les enseignants", None)
             cur.execute(
                 """
                 SELECT id, last_name || ' ' || first_name
                 FROM teachers
                 WHERE establishment_id=%s
+                  AND COALESCE(is_active, TRUE) = TRUE
                 ORDER BY last_name, first_name
                 """,
                 (est_id,),
@@ -176,53 +151,37 @@ class GenerateSalaryObligationsDialog(QDialog):
         finally:
             conn.close()
 
-    def _teaching_level_for_teacher(self, cursor, teacher_id):
-        cursor.execute(
-            """
-            SELECT COALESCE(cy.name, '')
-            FROM teacher_assignments ta
-            JOIN classes c ON c.id = ta.class_id
-            LEFT JOIN cycles cy ON cy.id = c.cycle_id
-            WHERE ta.teacher_id = %s
-            GROUP BY COALESCE(cy.name, '')
-            ORDER BY COUNT(*) DESC
-            LIMIT 1
-            """,
-            (teacher_id,),
-        )
-        row = cursor.fetchone()
-        return (row[0] or "").strip().lower() if row else ""
-
-    def _amount_for_level(self, level: str) -> float:
-        if self.mode_input.currentData() == "UNIQUE":
-            return float(self.amount_unique_input.value())
-        mapping = {
-            "maternelle": float(self.amount_maternelle_input.value()),
-            "primaire": float(self.amount_primaire_input.value()),
-            "collège": float(self.amount_college_input.value()),
-            "lycée": float(self.amount_lycee_input.value()),
-            "college": float(self.amount_college_input.value()),
-            "lycee": float(self.amount_lycee_input.value()),
-        }
-        level_amount = mapping.get(level, 0.0)
-        return level_amount if level_amount > 0 else float(self.amount_unique_input.value())
-
-    def update_amount_mode(self):
-        by_level = self.mode_input.currentData() == "BY_LEVEL"
-        self.amount_maternelle_input.setEnabled(by_level)
-        self.amount_primaire_input.setEnabled(by_level)
-        self.amount_college_input.setEnabled(by_level)
-        self.amount_lycee_input.setEnabled(by_level)
+    def load_school_years(self):
+        conn = get_connection()
+        if not conn:
+            return
+        try:
+            cur = conn.cursor()
+            self.school_year_input.clear()
+            cur.execute("SELECT id, name FROM school_years ORDER BY id DESC")
+            for school_year_id, name in cur.fetchall():
+                self.school_year_input.addItem(name, school_year_id)
+        finally:
+            conn.close()
 
     def generate_obligations(self):
         est_id = self.establishment_input.currentData()
         teacher_id = self.teacher_input.currentData()
-        month = self.month_input.currentData()
-        year = self.year_input.currentData()
+        school_year_id = self.school_year_input.currentData()
+        amount = float(self.amount_input.value())
         notes = self.notes_input.toPlainText().strip() or None
 
         if not est_id:
             QMessageBox.warning(self, "Validation", "Établissement obligatoire")
+            return
+        if not teacher_id:
+            QMessageBox.warning(self, "Validation", "Sélectionnez un enseignant.")
+            return
+        if not school_year_id:
+            QMessageBox.warning(self, "Validation", "Année scolaire obligatoire")
+            return
+        if amount <= 0:
+            QMessageBox.warning(self, "Validation", "Le salaire mensuel doit être supérieur à zéro.")
             return
 
         conn = get_connection()
@@ -232,44 +191,59 @@ class GenerateSalaryObligationsDialog(QDialog):
 
         try:
             cur = conn.cursor()
-            if teacher_id is None:
+            school_year_months = get_school_year_months(cur, int(school_year_id))
+            if not school_year_months:
+                QMessageBox.warning(self, "Validation", "Les dates de l'année scolaire sont invalides.")
+                return
+
+            generated = 0
+            for month, year in school_year_months:
                 cur.execute(
                     """
                     SELECT id
-                    FROM teachers
-                    WHERE establishment_id=%s
-                    ORDER BY last_name, first_name
+                    FROM salary_obligations
+                    WHERE establishment_id = %s
+                      AND person_type = 'TEACHER'
+                      AND person_id = %s
+                      AND period_month = %s
+                      AND period_year = %s
                     """,
-                    (est_id,),
+                    (est_id, teacher_id, month, year),
                 )
-                teacher_ids = [r[0] for r in cur.fetchall()]
-            else:
-                teacher_ids = [teacher_id]
-
-            inserted = 0
-            for t_id in teacher_ids:
-                level = self._teaching_level_for_teacher(cur, t_id)
-                amount = self._amount_for_level(level)
-                if amount <= 0:
-                    continue
-
-                cur.execute(
-                    """
-                    INSERT INTO salary_obligations (
-                        establishment_id, teacher_id, person_type, person_id,
-                        period_month, period_year, amount_due, notes, created_by
-                    ) VALUES (%s, %s, 'TEACHER', %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (establishment_id, person_type, person_id, period_month, period_year)
-                    DO UPDATE SET amount_due = EXCLUDED.amount_due,
-                                  notes = EXCLUDED.notes,
-                                  created_by = EXCLUDED.created_by
-                    """,
-                    (est_id, t_id, t_id, month, year, amount, notes, self.current_user.get("id")),
-                )
-                inserted += 1
+                existing = cur.fetchone()
+                if existing:
+                    cur.execute(
+                        """
+                        UPDATE salary_obligations
+                        SET teacher_id = %s,
+                            amount_due = %s,
+                            notes = %s,
+                            created_by = %s
+                        WHERE id = %s
+                        """,
+                        (teacher_id, amount, notes, self.current_user.get("id"), existing[0]),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        INSERT INTO salary_obligations (
+                            establishment_id, teacher_id, person_type, person_id,
+                            period_month, period_year, amount_due, notes, created_by
+                        ) VALUES (%s, %s, 'TEACHER', %s, %s, %s, %s, %s, %s)
+                        """,
+                        (est_id, teacher_id, teacher_id, month, year, amount, notes, self.current_user.get("id")),
+                    )
+                generated += 1
 
             conn.commit()
-            QMessageBox.information(self, "Succès", f"Obligations enseignants générées: {inserted}")
+            QMessageBox.information(
+                self,
+                "Succès",
+                (
+                    f"Obligations générées pour {self.teacher_input.currentText()} "
+                    f"sur {self.school_year_input.currentText()} : {generated}"
+                ),
+            )
             self.accept()
         except Exception as e:
             conn.rollback()

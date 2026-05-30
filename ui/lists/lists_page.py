@@ -1,6 +1,7 @@
 import csv
 import os
 from datetime import datetime
+from pathlib import Path
 
 from PyQt6.QtCore import QDate, Qt
 from PyQt6.QtWidgets import (
@@ -21,7 +22,7 @@ from PyQt6.QtWidgets import (
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Image as RLImage, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from database.connection import get_connection
 from utils.college_bulletin_service import get_college_bulletin_data
@@ -116,6 +117,7 @@ class ListsPage(QWidget):
 
         self.current_headers: list[str] = []
         self.current_rows: list[list[str]] = []
+        self.current_footer_lines: list[str] = []
 
         layout = QVBoxLayout()
 
@@ -318,11 +320,30 @@ class ListsPage(QWidget):
             self.end_date_filter.date().toString("yyyy-MM-dd"),
         )
 
-    def _set_current_data(self, headers: list[str], rows: list[list[str]]):
+    def _set_current_data(
+        self,
+        headers: list[str],
+        rows: list[list[str]],
+        footer_lines: list[str] | None = None,
+    ):
         self.current_headers = headers
         self.current_rows = rows
+        self.current_footer_lines = footer_lines or []
         self._fill_table()
         self._update_summary()
+
+    def _get_class_titular_name(self, cursor, class_id: int) -> str:
+        cursor.execute(
+            """
+            SELECT COALESCE(t.last_name || ' ' || t.first_name, '')
+            FROM classes c
+            LEFT JOIN teachers t ON t.id = c.titular_teacher_id
+            WHERE c.id = %s
+            """,
+            (class_id,),
+        )
+        row = cursor.fetchone()
+        return (row[0] or "").strip() if row else ""
 
     def load_establishments(self):
         self.establishment_filter.clear()
@@ -931,6 +952,35 @@ class ListsPage(QWidget):
             )
         return headers, rows
 
+    def _build_results_footer_lines(
+        self,
+        cursor,
+        class_id: int,
+        term_id: int,
+        school_year_id: int,
+        search: str,
+    ) -> list[str]:
+        _cycle_name, records = self._build_result_records(cursor, class_id, term_id, school_year_id, search)
+        titular_name = self._get_class_titular_name(cursor, class_id)
+
+        effectif = len(records)
+        admitted_count = sum(1 for item in records if str(item.get("status", "")).strip().lower() in {"oui", "admis", "admis(e)"})
+        not_admitted_count = max(effectif - admitted_count, 0)
+        class_average = round(sum(float(item.get("average", 0) or 0) for item in records) / effectif, 2) if effectif else 0.0
+        success_rate = round((admitted_count / effectif) * 100, 2) if effectif else 0.0
+
+        return [
+            f"Titulaire de la classe : {titular_name or '-'}",
+            (
+                "Statistiques : "
+                f"Effectif = {effectif} | "
+                f"Admis = {admitted_count} | "
+                f"Non admis = {not_admitted_count} | "
+                f"Moyenne de classe = {class_average:.2f} | "
+                f"Pourcentage de réussite = {success_rate:.2f}%"
+            ),
+        ]
+
     def _load_missing_grades_rows(
         self,
         cursor,
@@ -1431,6 +1481,7 @@ class ListsPage(QWidget):
         subject_id = self.subject_filter.currentData()
         search_text = self.search_input.text().strip()
         search = f"%{search_text}%"
+        footer_lines: list[str] = []
 
         if key in CLASS_REQUIRED_TYPES and class_id is None:
             self._set_current_data([], [])
@@ -1477,6 +1528,9 @@ class ListsPage(QWidget):
                 )
                 headers = ["Matricule", "Nom", "Prénom", "Sexe", "Classe"]
                 rows = cur.fetchall()
+                if class_id is not None:
+                    titular_name = self._get_class_titular_name(cur, int(class_id))
+                    footer_lines.append(f"Titulaire de la classe : {titular_name or '-'}")
 
             elif key == "STUDENTS_REGULAR":
                 headers, rows = self._load_payment_status_rows(cur, "regular", est_id, school_year_id, class_id, search)
@@ -1499,12 +1553,15 @@ class ListsPage(QWidget):
 
             elif key == "RESULTS_BY_CLASS":
                 headers, rows = self._load_results_rows(cur, int(class_id), int(term_id), int(school_year_id), search, sort_by_rank=False)
+                footer_lines = self._build_results_footer_lines(cur, int(class_id), int(term_id), int(school_year_id), search)
 
             elif key == "MERIT_RESULTS_BY_CLASS":
                 headers, rows = self._load_results_rows(cur, int(class_id), int(term_id), int(school_year_id), search, sort_by_rank=True)
+                footer_lines = self._build_results_footer_lines(cur, int(class_id), int(term_id), int(school_year_id), search)
 
             elif key == "ADMISSION_BY_CLASS":
                 headers, rows = self._load_results_rows(cur, int(class_id), int(term_id), int(school_year_id), search, sort_by_rank=True)
+                footer_lines = self._build_results_footer_lines(cur, int(class_id), int(term_id), int(school_year_id), search)
 
             elif key == "OPTIONAL_SUBJECT_STUDENTS":
                 headers, rows = self._load_optional_subject_students_rows(cur, int(class_id), int(school_year_id), search, subject_id)
@@ -1629,7 +1686,7 @@ class ListsPage(QWidget):
                 rows = cur.fetchall()
 
             normalized_rows = [["" if value is None else str(value) for value in row] for row in rows]
-            self._set_current_data(headers, normalized_rows)
+            self._set_current_data(headers, normalized_rows, footer_lines=footer_lines)
 
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Chargement impossible : {e}")
@@ -1686,61 +1743,361 @@ class ListsPage(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Export CSV impossible : {e}")
 
-    def _generate_pdf(self):
-        if not self.current_rows:
-            raise ValueError("Aucune donnée à imprimer")
+    def _get_pdf_school_identity(self) -> dict[str, str]:
+        identity = {
+            "school_name": "Établissement scolaire",
+            "address": "-",
+            "phone": "-",
+            "email": "-",
+            "logo_path": "",
+        }
 
-        os.makedirs("prints/lists", exist_ok=True)
-        filename = f"prints/lists/{self.type_filter.currentData()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        conn = get_connection()
+        if not conn:
+            return identity
 
-        doc = SimpleDocTemplate(
-            filename,
-            pagesize=landscape(A4),
-            leftMargin=28,
-            rightMargin=28,
-            topMargin=28,
-            bottomMargin=28,
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT
+                    COALESCE(name, ''),
+                    COALESCE(address, ''),
+                    COALESCE(phone, ''),
+                    COALESCE(email, ''),
+                    COALESCE(logo_path, '')
+                FROM school_info
+                ORDER BY id
+                LIMIT 1
+                """
+            )
+            row = cur.fetchone()
+            if row:
+                identity["school_name"] = row[0] or identity["school_name"]
+                identity["address"] = row[1] or "-"
+                identity["phone"] = row[2] or "-"
+                identity["email"] = row[3] or "-"
+                identity["logo_path"] = row[4] or ""
+        finally:
+            conn.close()
+
+        return identity
+
+    def _build_pdf_header_story(self, styles, available_width: float) -> list:
+        identity = self._get_pdf_school_identity()
+        left_width = 150
+        right_width = 150
+        center_width = max(available_width - left_width - right_width, 220)
+
+        left_block = Paragraph(
+            "<para align='left'><b>MINISTERE DE</b><br/><b>L'EDUCATION NATIONALE</b></para>",
+            styles["Normal"],
         )
-        styles = getSampleStyleSheet()
+        right_block = Paragraph(
+            "<para align='right'><b>REPUBLIQUE TOGOLAISE</b><br/>Travail - Liberte - Patrie</para>",
+            styles["Normal"],
+        )
+
+        center_flowables = []
+        logo_path = (identity.get("logo_path") or "").replace("\\", "/")
+        if logo_path:
+            absolute_logo = logo_path if os.path.isabs(logo_path) else str(Path(logo_path).resolve())
+            if os.path.exists(absolute_logo):
+                try:
+                    center_flowables.append(RLImage(absolute_logo, width=42, height=42))
+                    center_flowables.append(Spacer(1, 4))
+                except Exception:
+                    pass
+
+        center_flowables.append(
+            Paragraph(
+                f"<para align='center'><b>{identity['school_name']}</b></para>",
+                styles["Title"],
+            )
+        )
+        center_flowables.append(
+            Paragraph(
+                f"<para align='center'>{identity['address']}</para>",
+                styles["Normal"],
+            )
+        )
+        center_flowables.append(
+            Paragraph(
+                f"<para align='center'>Tel : {identity['phone']} | Email : {identity['email']}</para>",
+                styles["Normal"],
+            )
+        )
+
+        header_table = Table(
+            [[left_block, center_flowables, right_block]],
+            colWidths=[left_width, center_width, right_width],
+        )
+        header_table.setStyle(
+            TableStyle(
+                [
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("ALIGN", (0, 0), (0, 0), "LEFT"),
+                    ("ALIGN", (1, 0), (1, 0), "CENTER"),
+                    ("ALIGN", (2, 0), (2, 0), "RIGHT"),
+                    ("LINEABOVE", (0, 0), (-1, 0), 1.8, colors.HexColor("#2563eb")),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ]
+            )
+        )
 
         subtitle_parts = [
-            f"Établissement: {self.establishment_filter.currentText()}",
-            f"Année scolaire: {self.school_year_filter.currentText()}",
+            f"Établissement : {self.establishment_filter.currentText()}",
+            f"Année scolaire : {self.school_year_filter.currentText()}",
         ]
         if self.term_filter.isEnabled():
-            subtitle_parts.append(f"Trimestre: {self.term_filter.currentText()}")
+            subtitle_parts.append(f"Trimestre : {self.term_filter.currentText()}")
         if self.class_filter.isEnabled():
-            subtitle_parts.append(f"Classe: {self.class_filter.currentText()}")
+            subtitle_parts.append(f"Classe : {self.class_filter.currentText()}")
         if self.subject_filter.isEnabled():
-            subtitle_parts.append(f"Matière: {self.subject_filter.currentText()}")
+            subtitle_parts.append(f"Matière : {self.subject_filter.currentText()}")
         if self.start_date_filter.isEnabled() and self.end_date_filter.isEnabled():
             start_date, end_date = self._get_date_range()
-            subtitle_parts.append(f"Période: {start_date} -> {end_date}")
+            subtitle_parts.append(f"Période : {start_date} -> {end_date}")
+        subtitle_parts.append(f"Imprimé le : {datetime.now().strftime('%d/%m/%Y %H:%M')}")
 
-        table = Table([self.current_headers] + self.current_rows, repeatRows=1)
+        return [
+            header_table,
+            Spacer(1, 10),
+            Paragraph(
+                f"<para align='center'><b>LISTE - {self.type_filter.currentText().upper()}</b></para>",
+                styles["Title"],
+            ),
+            Spacer(1, 4),
+            Paragraph(
+                f"<para align='center'>{' | '.join(subtitle_parts)}</para>",
+                styles["Normal"],
+            ),
+            Spacer(1, 12),
+        ]
+
+    def _build_pdf_table(self, available_width: float) -> Table:
+        table_data = [self.current_headers] + self.current_rows
+        column_count = len(self.current_headers)
+        if column_count == 0:
+            return Table([[]])
+
+        weights: list[float] = []
+        for col_index, header in enumerate(self.current_headers):
+            column_values = [row[col_index] for row in self.current_rows if col_index < len(row)]
+            max_len = max([len(header or "")] + [len(value or "") for value in column_values], default=8)
+            if max_len <= 6:
+                weight = 0.8
+            elif max_len <= 10:
+                weight = 1.0
+            elif max_len <= 16:
+                weight = 1.25
+            elif max_len <= 24:
+                weight = 1.55
+            else:
+                weight = 1.9
+            weights.append(weight)
+
+        total_weight = sum(weights) or float(column_count)
+        col_widths = [(available_width * weight) / total_weight for weight in weights]
+
+        if column_count <= 5:
+            font_size = 9
+        elif column_count <= 7:
+            font_size = 8
+        elif column_count <= 9:
+            font_size = 7
+        else:
+            font_size = 6.2
+
+        table = Table(table_data, repeatRows=1, colWidths=col_widths, hAlign="LEFT")
         table.setStyle(
             TableStyle(
                 [
                     ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2563eb")),
                     ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
                     ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                     ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                    ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ("FONTSIZE", (0, 0), (-1, -1), font_size),
+                    ("LEADING", (0, 0), (-1, -1), font_size + 1.2),
                     ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
                     ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8fafc")]),
-                    ("TOPPADDING", (0, 0), (-1, -1), 6),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                    ("TOPPADDING", (0, 0), (-1, -1), 5),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 4),
                 ]
             )
         )
+        return table
+
+    def _build_grades_matrix_story(self, styles, available_width: float) -> list:
+        if not self.current_rows:
+            return []
+
+        is_secondary = "Composition" in self.current_headers
+        if is_secondary:
+            table = self._build_secondary_grades_matrix_table(available_width)
+        else:
+            table = self._build_primary_grades_matrix_table(available_width)
+
+        info_lines = [
+            f"<b>Année scolaire :</b> {self.school_year_filter.currentText()}",
+            f"<b>Évaluation :</b> {self.term_filter.currentText()}",
+            f"<b>Classe :</b> {self.class_filter.currentText()}",
+        ]
 
         story = [
-            Paragraph(f"<b>Liste - {self.type_filter.currentText()}</b>", styles["Title"]),
-            Spacer(1, 8),
-            Paragraph(" | ".join(subtitle_parts), styles["Normal"]),
-            Spacer(1, 14),
-            table,
+            Paragraph("<para align='center'><b>DETAIL DES NOTES</b></para>", styles["Title"]),
+            Spacer(1, 6),
         ]
+        for line in info_lines:
+            story.append(Paragraph(line, styles["Normal"]))
+            story.append(Spacer(1, 2))
+        story.append(Spacer(1, 6))
+        story.append(table)
+        return story
+
+    def _build_primary_grades_matrix_table(self, available_width: float) -> Table:
+        student_map: dict[tuple[str, str], dict[str, str]] = {}
+        subjects: list[str] = []
+
+        for row in self.current_rows:
+            matricule, last_name, first_name, _gender, subject_name, score, _max_score = row
+            student_key = (matricule, f"{last_name} {first_name}".strip())
+            if student_key not in student_map:
+                student_map[student_key] = {}
+            student_map[student_key][subject_name] = score
+            if subject_name not in subjects:
+                subjects.append(subject_name)
+
+        header_top = ["N°", "Nom élève"] + subjects
+        header_bottom = ["", ""] + ["Note" for _ in subjects]
+        table_data = [header_top, header_bottom]
+
+        for index, ((_, student_name), grades_by_subject) in enumerate(student_map.items(), start=1):
+            row = [str(index), student_name]
+            for subject_name in subjects:
+                row.append(grades_by_subject.get(subject_name, ""))
+            table_data.append(row)
+
+        no_width = 26
+        name_width = 170
+        remaining_width = max(available_width - no_width - name_width, 180)
+        subject_width = remaining_width / max(len(subjects), 1)
+        col_widths = [no_width, name_width] + [subject_width for _ in subjects]
+
+        table = Table(table_data, repeatRows=2, colWidths=col_widths, hAlign="LEFT")
+        style_commands = [
+            ("SPAN", (0, 0), (0, 1)),
+            ("SPAN", (1, 0), (1, 1)),
+            ("BACKGROUND", (0, 0), (-1, 1), colors.HexColor("#d1d5db")),
+            ("TEXTCOLOR", (0, 0), (-1, 1), colors.black),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("ALIGN", (1, 2), (1, -1), "LEFT"),
+            ("FONTNAME", (0, 0), (-1, 1), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 7.2),
+            ("LEADING", (0, 0), (-1, -1), 8),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ("LEFTPADDING", (0, 0), (-1, -1), 3),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+        ]
+        table.setStyle(TableStyle(style_commands))
+        return table
+
+    def _build_secondary_grades_matrix_table(self, available_width: float) -> Table:
+        student_map: dict[tuple[str, str], dict[str, tuple[str, str]]] = {}
+        subjects: list[str] = []
+
+        for row in self.current_rows:
+            matricule, last_name, first_name, _gender, subject_name, _subject_type, _coef, classe_note, compo_note, _moyenne, _note_def = row
+            student_key = (matricule, f"{last_name} {first_name}".strip())
+            if student_key not in student_map:
+                student_map[student_key] = {}
+            student_map[student_key][subject_name] = (classe_note, compo_note)
+            if subject_name not in subjects:
+                subjects.append(subject_name)
+
+        header_top = ["N°", "Nom élève"]
+        header_bottom = ["", ""]
+        for subject_name in subjects:
+            header_top.extend([subject_name, ""])
+            header_bottom.extend(["Classe", "Compo."])
+
+        table_data = [header_top, header_bottom]
+        for index, ((_, student_name), grades_by_subject) in enumerate(student_map.items(), start=1):
+            row = [str(index), student_name]
+            for subject_name in subjects:
+                classe_note, compo_note = grades_by_subject.get(subject_name, ("", ""))
+                row.extend([classe_note, compo_note])
+            table_data.append(row)
+
+        no_width = 24
+        name_width = 180
+        remaining_width = max(available_width - no_width - name_width, 220)
+        subcol_count = max(len(subjects) * 2, 1)
+        subject_sub_width = remaining_width / subcol_count
+        col_widths = [no_width, name_width]
+        for _subject_name in subjects:
+            col_widths.extend([subject_sub_width, subject_sub_width])
+
+        table = Table(table_data, repeatRows=2, colWidths=col_widths, hAlign="LEFT")
+        style_commands = [
+            ("SPAN", (0, 0), (0, 1)),
+            ("SPAN", (1, 0), (1, 1)),
+            ("BACKGROUND", (0, 0), (-1, 1), colors.HexColor("#d1d5db")),
+            ("TEXTCOLOR", (0, 0), (-1, 1), colors.black),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("ALIGN", (1, 2), (1, -1), "LEFT"),
+            ("FONTNAME", (0, 0), (-1, 1), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, 0), 6.2),
+            ("FONTSIZE", (0, 1), (-1, -1), 5.8),
+            ("LEADING", (0, 0), (-1, -1), 6.8),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+            ("TOPPADDING", (0, 0), (-1, -1), 3),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ("LEFTPADDING", (0, 0), (-1, -1), 2),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+        ]
+        col_index = 2
+        for _subject_name in subjects:
+            style_commands.append(("SPAN", (col_index, 0), (col_index + 1, 0)))
+            col_index += 2
+        table.setStyle(TableStyle(style_commands))
+        return table
+
+    def _generate_pdf(self):
+        if not self.current_rows:
+            raise ValueError("Aucune donnée à imprimer")
+
+        os.makedirs("prints/lists", exist_ok=True)
+        filename = f"prints/lists/{self.type_filter.currentData()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        is_grades_list = self.type_filter.currentData() == "GRADES_BY_CLASS"
+
+        doc = SimpleDocTemplate(
+            filename,
+            pagesize=landscape(A4) if is_grades_list else A4,
+            leftMargin=24,
+            rightMargin=24,
+            topMargin=24,
+            bottomMargin=24,
+        )
+        styles = getSampleStyleSheet()
+
+        story = self._build_pdf_header_story(styles, doc.width)
+        if is_grades_list:
+            story.extend(self._build_grades_matrix_story(styles, doc.width))
+        else:
+            story.append(self._build_pdf_table(doc.width))
+        if self.current_footer_lines:
+            story.append(Spacer(1, 14))
+            for line in self.current_footer_lines:
+                story.append(Paragraph(f"<b>{line}</b>", styles["Normal"]))
+                story.append(Spacer(1, 4))
         doc.build(story)
         return filename
 

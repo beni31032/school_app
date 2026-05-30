@@ -70,6 +70,14 @@ class EditClassDialog(QDialog):
                 padding: 6px 8px;
                 min-height: 28px;
             }
+            QComboBox QAbstractItemView {
+                background-color: white;
+                color: #111827;
+                border: 1px solid #cbd5e1;
+                selection-background-color: #2563eb;
+                selection-color: white;
+                outline: none;
+            }
             QPushButton {
                 background-color: #2563eb;
                 color: white;

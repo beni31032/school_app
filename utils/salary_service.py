@@ -98,3 +98,33 @@ def ensure_salary_table() -> None:
         conn.commit()
     finally:
         conn.close()
+
+
+def get_school_year_months(cursor, school_year_id: int) -> list[tuple[int, int]]:
+    cursor.execute(
+        """
+        SELECT start_date, end_date
+        FROM school_years
+        WHERE id = %s
+        """,
+        (school_year_id,),
+    )
+    row = cursor.fetchone()
+    if not row or not row[0] or not row[1]:
+        return []
+
+    start_date, end_date = row
+    current_year = int(start_date.year)
+    current_month = int(start_date.month)
+    end_year = int(end_date.year)
+    end_month = int(end_date.month)
+
+    months: list[tuple[int, int]] = []
+    while (current_year, current_month) <= (end_year, end_month):
+        months.append((current_month, current_year))
+        current_month += 1
+        if current_month > 12:
+            current_month = 1
+            current_year += 1
+
+    return months

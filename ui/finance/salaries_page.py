@@ -90,8 +90,8 @@ class SalariesPage(QWidget):
         filters.addWidget(self.year_filter)
 
         btns = QHBoxLayout()
-        self.gen_teachers_btn = QPushButton("Générer obligations enseignants")
-        self.gen_staff_btn = QPushButton("Générer obligations employés")
+        self.gen_teachers_btn = QPushButton("Générer année enseignant")
+        self.gen_staff_btn = QPushButton("Générer année employés")
         self.add_payment_btn = QPushButton("Enregistrer paiement")
         self.details_btn = QPushButton("Voir fiche complète")
         self.refresh_btn = QPushButton("Actualiser")

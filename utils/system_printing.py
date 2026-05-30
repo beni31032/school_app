@@ -141,8 +141,25 @@ def _detect_pdf_media(filepath: str) -> str | None:
     return None
 
 
+def _detect_pdf_orientation(filepath: str) -> str | None:
+    try:
+        reader = PdfReader(filepath)
+        if not reader.pages:
+            return None
+
+        page = reader.pages[0]
+        media_box = page.mediabox
+        width = float(media_box.width)
+        height = float(media_box.height)
+        return "landscape" if width > height else "portrait"
+    except Exception:
+        return None
+
+
 def send_file_to_printer(filepath: str, printer_name: str | None = None) -> str:
     if sys.platform.startswith("linux"):
+        orientation = _detect_pdf_orientation(filepath)
+        orientation_requested = "4" if orientation == "landscape" else "3"
         command = [
             "lp",
             "-o",
@@ -150,7 +167,7 @@ def send_file_to_printer(filepath: str, printer_name: str | None = None) -> str:
             "-o",
             "position=center",
             "-o",
-            "orientation-requested=3",
+            f"orientation-requested={orientation_requested}",
         ]
         if printer_name:
             command.extend(["-d", printer_name])

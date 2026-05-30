@@ -87,6 +87,14 @@ class AddSalaryPaymentDialog(QDialog):
                 border-radius: 6px;
                 padding: 6px 8px;
             }
+            QComboBox QAbstractItemView {
+                background-color: white;
+                color: #111827;
+                border: 1px solid #cbd5e1;
+                selection-background-color: #2563eb;
+                selection-color: white;
+                outline: none;
+            }
             QPushButton {
                 min-height: 34px;
                 border-radius: 8px;

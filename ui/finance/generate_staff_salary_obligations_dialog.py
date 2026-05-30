@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
 )
 
 from database.connection import get_connection
-from utils.salary_service import ensure_salary_table
+from utils.salary_service import ensure_salary_table, get_school_year_months
 
 
 MONTHS = [
@@ -29,7 +29,7 @@ class GenerateStaffSalaryObligationsDialog(QDialog):
 
         ensure_salary_table()
 
-        self.setWindowTitle("Générer obligations salaires employés")
+        self.setWindowTitle("Générer les salaires employés sur l'année scolaire")
         self.setFixedWidth(520)
 
         layout = QVBoxLayout()
@@ -37,8 +37,7 @@ class GenerateStaffSalaryObligationsDialog(QDialog):
 
         self.establishment_input = QComboBox()
         self.staff_input = QComboBox()
-        self.month_input = QComboBox()
-        self.year_input = QComboBox()
+        self.school_year_input = QComboBox()
         self.amount_input = QDoubleSpinBox()
         self.amount_input.setRange(0, 999999999)
         self.amount_input.setDecimals(2)
@@ -46,18 +45,9 @@ class GenerateStaffSalaryObligationsDialog(QDialog):
         self.notes_input.setPlaceholderText("Notes optionnelles")
         self.notes_input.setFixedHeight(80)
 
-        today = QDate.currentDate()
-        for idx, label in enumerate(MONTHS, start=1):
-            self.month_input.addItem(label, idx)
-        self.month_input.setCurrentIndex(today.month() - 1)
-        for y in range(today.year() - 1, today.year() + 4):
-            self.year_input.addItem(str(y), y)
-        self.year_input.setCurrentText(str(today.year()))
-
         form.addRow("Établissement :", self.establishment_input)
         form.addRow("Employé :", self.staff_input)
-        form.addRow("Mois :", self.month_input)
-        form.addRow("Année :", self.year_input)
+        form.addRow("Année scolaire :", self.school_year_input)
         form.addRow("Montant (par employé / fallback):", self.amount_input)
         form.addRow("Notes :", self.notes_input)
 
@@ -81,6 +71,14 @@ class GenerateStaffSalaryObligationsDialog(QDialog):
                 border: 1px solid #cbd5e1;
                 border-radius: 6px;
                 padding: 6px 8px;
+            }
+            QComboBox QAbstractItemView {
+                background-color: white;
+                color: #111827;
+                border: 1px solid #cbd5e1;
+                selection-background-color: #2563eb;
+                selection-color: white;
+                outline: none;
             }
             QPushButton {
                 min-height: 34px;
@@ -107,6 +105,7 @@ class GenerateStaffSalaryObligationsDialog(QDialog):
         self.establishment_input.currentIndexChanged.connect(self.load_staff)
 
         self.load_establishments()
+        self.load_school_years()
 
     def load_establishments(self):
         conn = get_connection()
@@ -157,16 +156,31 @@ class GenerateStaffSalaryObligationsDialog(QDialog):
         finally:
             conn.close()
 
+    def load_school_years(self):
+        conn = get_connection()
+        if not conn:
+            return
+        try:
+            cur = conn.cursor()
+            self.school_year_input.clear()
+            cur.execute("SELECT id, name FROM school_years ORDER BY id DESC")
+            for school_year_id, name in cur.fetchall():
+                self.school_year_input.addItem(name, school_year_id)
+        finally:
+            conn.close()
+
     def generate_obligations(self):
         est_id = self.establishment_input.currentData()
         staff_id = self.staff_input.currentData()
-        month = self.month_input.currentData()
-        year = self.year_input.currentData()
+        school_year_id = self.school_year_input.currentData()
         amount = float(self.amount_input.value())
         notes = self.notes_input.toPlainText().strip() or None
 
         if not est_id:
             QMessageBox.warning(self, "Validation", "Établissement obligatoire")
+            return
+        if not school_year_id:
+            QMessageBox.warning(self, "Validation", "Année scolaire obligatoire")
             return
         if amount <= 0:
             QMessageBox.warning(self, "Validation", "Montant obligatoire")
@@ -179,6 +193,11 @@ class GenerateStaffSalaryObligationsDialog(QDialog):
 
         try:
             cur = conn.cursor()
+            school_year_months = get_school_year_months(cur, int(school_year_id))
+            if not school_year_months:
+                QMessageBox.warning(self, "Validation", "Les dates de l'année scolaire sont invalides.")
+                return
+
             if staff_id is None:
                 cur.execute(
                     """
@@ -193,25 +212,52 @@ class GenerateStaffSalaryObligationsDialog(QDialog):
             else:
                 staff_ids = [staff_id]
 
-            inserted = 0
+            generated = 0
             for s_id in staff_ids:
-                cur.execute(
-                    """
-                    INSERT INTO salary_obligations (
-                        establishment_id, staff_member_id, person_type, person_id,
-                        period_month, period_year, amount_due, notes, created_by
-                    ) VALUES (%s, %s, 'STAFF', %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (establishment_id, person_type, person_id, period_month, period_year)
-                    DO UPDATE SET amount_due = EXCLUDED.amount_due,
-                                  notes = EXCLUDED.notes,
-                                  created_by = EXCLUDED.created_by
-                    """,
-                    (est_id, s_id, s_id, month, year, amount, notes, self.current_user.get("id")),
-                )
-                inserted += 1
+                for month, year in school_year_months:
+                    cur.execute(
+                        """
+                        SELECT id
+                        FROM salary_obligations
+                        WHERE establishment_id = %s
+                          AND person_type = 'STAFF'
+                          AND person_id = %s
+                          AND period_month = %s
+                          AND period_year = %s
+                        """,
+                        (est_id, s_id, month, year),
+                    )
+                    existing = cur.fetchone()
+                    if existing:
+                        cur.execute(
+                            """
+                            UPDATE salary_obligations
+                            SET staff_member_id = %s,
+                                amount_due = %s,
+                                notes = %s,
+                                created_by = %s
+                            WHERE id = %s
+                            """,
+                            (s_id, amount, notes, self.current_user.get("id"), existing[0]),
+                        )
+                    else:
+                        cur.execute(
+                            """
+                            INSERT INTO salary_obligations (
+                                establishment_id, staff_member_id, person_type, person_id,
+                                period_month, period_year, amount_due, notes, created_by
+                            ) VALUES (%s, %s, 'STAFF', %s, %s, %s, %s, %s, %s)
+                            """,
+                            (est_id, s_id, s_id, month, year, amount, notes, self.current_user.get("id")),
+                        )
+                    generated += 1
 
             conn.commit()
-            QMessageBox.information(self, "Succès", f"Obligations employés générées: {inserted}")
+            QMessageBox.information(
+                self,
+                "Succès",
+                f"Obligations employés générées pour {self.school_year_input.currentText()} : {generated}",
+            )
             self.accept()
         except Exception as e:
             conn.rollback()
