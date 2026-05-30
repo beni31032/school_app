@@ -1,0 +1,12 @@
+{
+  "DATABASE_URL": "",
+  "DB_HOST": "aws-0-eu-west-1.pooler.supabase.com",
+  "DB_NAME": "postgres",
+  "DB_USER": "postgres.your_project_ref",
+  "DB_PASSWORD": "replace_with_your_password",
+  "DB_PORT": "5432",
+  "DB_SSLMODE": "require",
+  "DB_CONNECT_TIMEOUT": 10,
+  "DB_POOL_MINCONN": 1,
+  "DB_POOL_MAXCONN": 6
+}
