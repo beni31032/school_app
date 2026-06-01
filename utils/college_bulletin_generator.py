@@ -6,6 +6,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
 from database.connection import get_connection
+from utils.path_utils import ensure_app_parent, resolve_app_path
 from utils.college_bulletin_service import get_college_bulletin_data
 
 PRIMARY_BLUE = colors.HexColor("#1d4ed8")
@@ -46,6 +47,15 @@ def _get_observation_label(avg: float) -> str:
     return "Insuffisant"
 
 
+def _resolve_existing_path(path: str | None) -> str:
+    if not path:
+        return ""
+    resolved_path = resolve_app_path(path.replace("\\", "/"))
+    if resolved_path.exists():
+        return str(resolved_path)
+    return ""
+
+
 def _draw_page_header(c: canvas.Canvas, width: float, height: float, school_name: str, school_address: str, school_phone: str, school_email: str, school_logo: str, data: dict, compact: bool = False) -> float:
     left = 28
     right = width - 28
@@ -66,10 +76,11 @@ def _draw_page_header(c: canvas.Canvas, width: float, height: float, school_name
 
     logo_size = 28 if compact else 38
     center_logo_drawn = False
-    if school_logo and os.path.exists(school_logo):
+    resolved_school_logo = _resolve_existing_path(school_logo)
+    if resolved_school_logo:
         try:
             c.drawImage(
-                school_logo,
+                resolved_school_logo,
                 (width - logo_size) / 2,
                 top - 14 - logo_size,
                 width=logo_size,
@@ -165,13 +176,13 @@ def _draw_identity_cards(c: canvas.Canvas, width: float, y: float, data: dict) -
     c.drawString(rx, y - 25, f"Effectif : {data['effectif']}  (G: {data['boys']} / F: {data['girls']})")
     c.drawString(rx, y - 38, f"Professeur principal : {data['titular_name'] or '-'}")
 
-    photo_path = data.get("photo_path") or ""
+    photo_path = _resolve_existing_path(data.get("photo_path")) or ""
     inner_margin = 7
     inner_x = photo_x + inner_margin
     inner_y = y - block_h + inner_margin
     inner_w = photo_w - (inner_margin * 2)
     inner_h = block_h - (inner_margin * 2) - 7
-    if photo_path and os.path.exists(photo_path):
+    if photo_path:
         try:
             c.drawImage(
                 photo_path,
@@ -381,8 +392,7 @@ def generate_college_bulletin(student_id: int, term_id: int) -> str:
     school_email = school[3] if school else ""
     school_logo = school[4] if school else ""
 
-    os.makedirs("bulletins/college", exist_ok=True)
-    filename = (
+    filename = ensure_app_parent(
         f"bulletins/college/"
         f"{_safe_filename_part(data['class_name'])}_"
         f"{_safe_filename_part(data['student_name'])}_"
@@ -391,7 +401,7 @@ def generate_college_bulletin(student_id: int, term_id: int) -> str:
         f"{data['student_id']}.pdf"
     )
 
-    c = canvas.Canvas(filename, pagesize=A4)
+    c = canvas.Canvas(str(filename), pagesize=A4)
     width, height = A4
 
     left = 28
@@ -489,4 +499,4 @@ def generate_college_bulletin(student_id: int, term_id: int) -> str:
     y = _draw_annual_section(c, width, y, data)
     _draw_signatures(c, width, y)
     c.save()
-    return filename
+    return str(filename)

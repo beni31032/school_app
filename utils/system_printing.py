@@ -4,15 +4,20 @@ import sys
 
 from PyQt6.QtPrintSupport import QPrinterInfo
 from pypdf import PdfReader
+from utils.path_utils import resolve_app_path
 
 
 def open_file(filepath: str) -> None:
+    resolved_path = resolve_app_path(filepath)
+    if not resolved_path.exists():
+        raise FileNotFoundError(f"Fichier introuvable : {resolved_path}")
+
     if sys.platform.startswith("win"):
-        os.startfile(filepath)
+        os.startfile(str(resolved_path))
     elif sys.platform.startswith("darwin"):
-        subprocess.run(["open", filepath], check=False)
+        subprocess.run(["open", str(resolved_path)], check=False)
     else:
-        subprocess.run(["xdg-open", filepath], check=False)
+        subprocess.run(["xdg-open", str(resolved_path)], check=False)
 
 
 def _run_lpstat() -> str:
@@ -121,7 +126,7 @@ def get_default_printer_name() -> str | None:
 
 def _detect_pdf_media(filepath: str) -> str | None:
     try:
-        reader = PdfReader(filepath)
+        reader = PdfReader(str(resolve_app_path(filepath)))
         if not reader.pages:
             return None
 
@@ -143,7 +148,7 @@ def _detect_pdf_media(filepath: str) -> str | None:
 
 def _detect_pdf_orientation(filepath: str) -> str | None:
     try:
-        reader = PdfReader(filepath)
+        reader = PdfReader(str(resolve_app_path(filepath)))
         if not reader.pages:
             return None
 
@@ -157,8 +162,9 @@ def _detect_pdf_orientation(filepath: str) -> str | None:
 
 
 def send_file_to_printer(filepath: str, printer_name: str | None = None) -> str:
+    resolved_path = resolve_app_path(filepath)
     if sys.platform.startswith("linux"):
-        orientation = _detect_pdf_orientation(filepath)
+        orientation = _detect_pdf_orientation(str(resolved_path))
         orientation_requested = "4" if orientation == "landscape" else "3"
         command = [
             "lp",
@@ -172,11 +178,11 @@ def send_file_to_printer(filepath: str, printer_name: str | None = None) -> str:
         if printer_name:
             command.extend(["-d", printer_name])
 
-        detected_media = _detect_pdf_media(filepath)
+        detected_media = _detect_pdf_media(str(resolved_path))
         if detected_media:
             command.extend(["-o", f"media={detected_media}"])
 
-        command.append(filepath)
+        command.append(str(resolved_path))
         result = subprocess.run(
             command,
             capture_output=True,

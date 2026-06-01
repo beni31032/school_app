@@ -5,6 +5,7 @@ from reportlab.lib.pagesizes import A5
 from reportlab.pdfgen import canvas
 
 from database.connection import get_connection
+from utils.path_utils import ensure_app_parent, resolve_app_path
 from utils.primary_bulletin_service import get_primary_bulletin_data
 
 
@@ -25,6 +26,15 @@ def _safe_filename_part(value: str) -> str:
         .replace("\\", "_")
         .replace(":", "_")
     )
+
+
+def _resolve_existing_path(path: str | None) -> str:
+    if not path:
+        return ""
+    resolved_path = resolve_app_path(path.replace("\\", "/"))
+    if resolved_path.exists():
+        return str(resolved_path)
+    return ""
 
 
 def _draw_school_header(c: canvas.Canvas, width: float, height: float, school_name: str, school_address: str, school_phone: str, school_email: str, school_logo: str) -> float:
@@ -48,11 +58,12 @@ def _draw_school_header(c: canvas.Canvas, width: float, height: float, school_na
     c.drawRightString(right, header_y - 9, "Travail - Liberté - Patrie")
 
     center_logo_drawn = False
-    if school_logo and os.path.exists(school_logo):
+    resolved_school_logo = _resolve_existing_path(school_logo)
+    if resolved_school_logo:
         try:
             logo_size = 34
             c.drawImage(
-                school_logo,
+                resolved_school_logo,
                 (width - logo_size) / 2,
                 header_y - 34,
                 width=logo_size,
@@ -117,26 +128,23 @@ def _draw_identity_block(c: canvas.Canvas, width: float, y: float, data: dict, t
 
     c.setStrokeColor(PRIMARY_SLATE)
     c.rect(photo_x, photo_y, photo_w, photo_h)
-    photo_path = data.get("photo_path")
+    photo_path = _resolve_existing_path(data.get("photo_path"))
     drawn = False
     if photo_path:
-        normalized = photo_path.replace("\\", "/")
-        absolute_path = normalized if os.path.isabs(normalized) else os.path.abspath(normalized)
-        if os.path.exists(absolute_path):
-            try:
-                c.drawImage(
-                    absolute_path,
-                    photo_x + 1.5,
-                    photo_y + 1.5,
-                    width=photo_w - 3,
-                    height=photo_h - 3,
-                    preserveAspectRatio=True,
-                    mask="auto",
-                    anchor="c",
-                )
-                drawn = True
-            except Exception:
-                drawn = False
+        try:
+            c.drawImage(
+                photo_path,
+                photo_x + 1.5,
+                photo_y + 1.5,
+                width=photo_w - 3,
+                height=photo_h - 3,
+                preserveAspectRatio=True,
+                mask="auto",
+                anchor="c",
+            )
+            drawn = True
+        except Exception:
+            drawn = False
 
     c.setFont("Helvetica", 6.3)
     if not drawn:
@@ -300,8 +308,7 @@ def generate_primary_bulletin(student_id: int, term_id: int) -> str:
 
     numero = data["rank"]
 
-    os.makedirs("bulletins/primary", exist_ok=True)
-    filename = (
+    filename = ensure_app_parent(
         f"bulletins/primary/"
         f"{_safe_filename_part(data['class_name'])}_"
         f"{_safe_filename_part(data['student_name'])}_"
@@ -310,7 +317,7 @@ def generate_primary_bulletin(student_id: int, term_id: int) -> str:
         f"{data['student_id']}.pdf"
     )
 
-    c = canvas.Canvas(filename, pagesize=A5)
+    c = canvas.Canvas(str(filename), pagesize=A5)
     width, height = A5
 
     y = _draw_school_header(c, width, height, school_name, school_address, school_phone, school_email, school_logo)
@@ -322,4 +329,4 @@ def generate_primary_bulletin(student_id: int, term_id: int) -> str:
     _draw_observation_and_signatures(c, width, y, data)
 
     c.save()
-    return filename
+    return str(filename)
